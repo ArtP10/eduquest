@@ -1,0 +1,18 @@
+<div class="leaderboard pixel-panel">
+  <h3>Clasificación</h3>
+  <ol>
+    @for (entry of socketService.leaderboard(); track entry.playerId) {
+      <li [class.me]="entry.playerId === socketService.playerId()" [class.first]="entry.rank === 1">
+        <span class="rank">
+          @if (entry.rank === 1) {
+            <app-pixel-icon name="trophy" [size]="16" />
+          } @else {
+            #{{ entry.rank }}
+          }
+        </span>
+        <span class="name">{{ entry.displayName }}</span>
+        <span class="score">{{ entry.total }}</span>
+      </li>
+    }
+  </ol>
+</div>

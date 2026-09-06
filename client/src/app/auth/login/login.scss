@@ -1,0 +1,75 @@
+.login {
+  max-width: 380px;
+  width: 100%;
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--ucab-paper-dim);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--ucab-ink-3);
+  }
+}
+
+.google-button-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+
+  img {
+    display: block;
+    // A raw square logo reads too heavy dropped straight onto a chunky
+    // pixel button — the white disc gives it a consistent "badge" edge
+    // regardless of what background sits behind it.
+    background: var(--ucab-paper);
+    border-radius: 50%;
+    padding: 2px;
+  }
+}
+
+.switch {
+  margin: 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--ucab-paper-dim);
+}
+
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ucab-blue);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+
+  &:focus-visible {
+    outline: 3px solid var(--ucab-gold);
+    outline-offset: 2px;
+  }
+}

@@ -1,0 +1,86 @@
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(64, 180, 229, 0.08), transparent 45%),
+    radial-gradient(circle at 80% 0%, rgba(255, 197, 38, 0.06), transparent 40%),
+    var(--ucab-ink);
+
+  // UCAB campus building as one large, faint backdrop (not tiled) — reads as
+  // atmosphere behind the cabinet, not a repeating pattern. Sits behind
+  // every screen (lobby, match, leaderboard) via this shared shell rather
+  // than being wired into each one individually.
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image: url('/sprites/ucab1.png');
+    background-repeat: no-repeat;
+    background-position: center 65%;
+    background-size: 100vw auto;
+    opacity: 0.7;
+    // mix-blend-mode: luminosity;
+    // Fades out toward every edge so it reads as a soft glow, not a hard
+    // rectangle of imagery dropped onto the gradient.
+    mask-image: radial-gradient(ellipse 75% 65% at center 70%, black 35%, transparent 82%);
+    pointer-events: none;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+// Selector shape (`.app-shell > .title-bar`, two segments) deliberately
+// matches `.app-shell > *` below so Angular's emulated-encapsulation
+// `[_ngcontent]` attribute lands on both segments of each — otherwise a
+// plain `.title-bar { z-index: 10 }` ends up LOWER specificity than the
+// combinator rule (one class+attribute pair vs. two) and silently loses,
+// which is what let the login/signup overlay (fixed-position, nested in
+// this header) render behind app-lobby despite the z-index on this rule.
+.app-shell > .title-bar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    color: var(--ucab-paper);
+    letter-spacing: 0.02em;
+  }
+}
+
+.main-nav {
+  display: flex;
+  gap: 0.9rem;
+  margin-left: 1rem;
+  font-size: 0.85rem;
+
+  a {
+    color: var(--ucab-paper-dim);
+    text-decoration: none;
+    font-weight: 700;
+
+    &:hover,
+    &.active {
+      color: var(--ucab-blue);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 3px solid var(--ucab-gold);
+      outline-offset: 2px;
+    }
+  }
+}

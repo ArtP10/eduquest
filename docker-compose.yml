@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: quizjumper
+    ports:
+      # Mapped to a non-default host port: this machine already runs a
+      # native Postgres service on 5432, and this container must not
+      # collide with it or with anything already depending on that instance.
+      - '5433:5432'
+    volumes:
+      - quizjumper-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  quizjumper-postgres-data:

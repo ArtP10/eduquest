@@ -1,0 +1,119 @@
+@if (loading()) {
+  <p class="hint">Cargando…</p>
+} @else if (notFound()) {
+  <app-pixel-panel title="Cuestionario no encontrado" class="quiz-editor">
+    <p class="hint">Este cuestionario no existe o no tienes acceso a él.</p>
+    <app-pixel-button (click)="goToMyQuizzes()">Volver a mis cuestionarios</app-pixel-button>
+  </app-pixel-panel>
+} @else if (loadError()) {
+  <app-pixel-panel title="Error" class="quiz-editor">
+    <p class="error">{{ loadError() }}</p>
+  </app-pixel-panel>
+} @else {
+  <div class="quiz-editor-shell">
+    <a routerLink="/quizzes" class="back-link">&larr; Mis cuestionarios</a>
+
+    <app-pixel-panel title="Detalles del cuestionario" class="quiz-editor">
+      <app-pixel-input label="Título" [value]="titleDraft()" (valueChange)="titleDraft.set($event)" />
+      @if (titleError(); as message) {
+        <p class="error">{{ message }}</p>
+      }
+      @if (publishError(); as message) {
+        <p class="error">{{ message }}</p>
+      }
+      <div class="actions">
+        <app-pixel-button variant="secondary" [disabled]="savingTitle() || !titleDraft().trim()" (click)="saveDraft()">
+          Guardar borrador
+        </app-pixel-button>
+        @if (quiz()?.status === 'draft') {
+          <app-pixel-button [disabled]="publishing() || questions().length === 0" (click)="publish()"> Publicar cuestionario </app-pixel-button>
+        } @else {
+          <span class="published-tag">Publicado</span>
+        }
+      </div>
+      @if (quiz()?.status === 'draft' && questions().length === 0) {
+        <p class="hint">Agrega al menos una pregunta antes de publicar.</p>
+      }
+    </app-pixel-panel>
+
+    <app-pixel-panel title="Preguntas" class="quiz-editor">
+      @for (question of questions(); track question.id) {
+        @if (isEditingQuestion(question.id)) {
+          <ng-container [ngTemplateOutlet]="questionForm" />
+        } @else {
+          <div class="question-card">
+            <p class="question-text">{{ question.questionText }}</p>
+            <ul class="choice-list">
+              @for (choice of question.choices; track $index) {
+                <li [class.correct]="$index === question.correctChoice">
+                  @if ($index === question.correctChoice) {
+                    <app-pixel-icon name="correct" [size]="14" />
+                  }
+                  {{ choice }}
+                </li>
+              }
+            </ul>
+            <div class="actions">
+              <app-pixel-button variant="secondary" (click)="startEditQuestion(question)">Editar</app-pixel-button>
+              <app-pixel-button variant="secondary" (click)="deleteQuestion(question)">Eliminar</app-pixel-button>
+            </div>
+          </div>
+        }
+      }
+
+      @if (isAddingQuestion()) {
+        <ng-container [ngTemplateOutlet]="questionForm" />
+      } @else {
+        <app-pixel-button (click)="startAddQuestion()">Agregar pregunta</app-pixel-button>
+      }
+    </app-pixel-panel>
+  </div>
+}
+
+<ng-template #questionForm>
+  <form class="question-form" (submit)="$event.preventDefault(); saveQuestionForm()">
+    <app-pixel-input label="Pregunta" [value]="formQuestionText()" (valueChange)="formQuestionText.set($event)" />
+
+    <app-pixel-choice-row
+      label="Opción A"
+      placeholder="Opción A"
+      [value]="formChoices()[0]"
+      [checked]="formCorrectChoice() === 0"
+      (valueChange)="setChoice(0, $event)"
+      (checkedChange)="formCorrectChoice.set(0)"
+    />
+    <app-pixel-choice-row
+      label="Opción B"
+      placeholder="Opción B"
+      [value]="formChoices()[1]"
+      [checked]="formCorrectChoice() === 1"
+      (valueChange)="setChoice(1, $event)"
+      (checkedChange)="formCorrectChoice.set(1)"
+    />
+    <app-pixel-choice-row
+      label="Opción C"
+      placeholder="Opción C"
+      [value]="formChoices()[2]"
+      [checked]="formCorrectChoice() === 2"
+      (valueChange)="setChoice(2, $event)"
+      (checkedChange)="formCorrectChoice.set(2)"
+    />
+    <app-pixel-choice-row
+      label="Opción D"
+      placeholder="Opción D"
+      [value]="formChoices()[3]"
+      [checked]="formCorrectChoice() === 3"
+      (valueChange)="setChoice(3, $event)"
+      (checkedChange)="formCorrectChoice.set(3)"
+    />
+
+    @if (formError(); as message) {
+      <p class="error">{{ message }}</p>
+    }
+
+    <div class="actions">
+      <app-pixel-button type="submit" [disabled]="formBusy()">Guardar pregunta</app-pixel-button>
+      <app-pixel-button type="button" variant="secondary" [disabled]="formBusy()" (click)="cancelQuestionForm()">Cancelar</app-pixel-button>
+    </div>
+  </form>
+</ng-template>

@@ -1,0 +1,23 @@
+@if (!socketService.roomCode() || socketService.matchPhase() === 'lobby') {
+  <app-lobby />
+} @else if (socketService.matchPhase() === 'ended') {
+  <div class="ended pixel-panel">
+    <h2>Resultados finales</h2>
+    <app-leaderboard />
+    <ol class="placements">
+      @for (place of socketService.finalPlacements(); track place.playerId) {
+        <li>
+          <span class="rank">#{{ place.rank }}</span>
+          <span class="label">altura</span>
+          <span class="value">{{ place.climbProgress | number: '1.0-0' }}</span>
+        </li>
+      }
+    </ol>
+    <button class="pixel-button" (click)="socketService.leaveRoom()">Volver al inicio</button>
+  </div>
+} @else {
+  <div class="playing">
+    <app-match />
+    <app-leaderboard />
+  </div>
+}

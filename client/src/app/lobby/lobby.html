@@ -1,0 +1,70 @@
+<div class="lobby pixel-panel">
+  @if (socketService.errorMessage(); as error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  @if (!socketService.roomCode()) {
+    <div class="entry">
+      <label>
+        <span>Nombre para mostrar</span>
+        <input [ngModel]="displayName()" (ngModelChange)="displayName.set($event)" maxlength="20" placeholder="Tu nombre" />
+      </label>
+
+      @if (availableQuizzes().length > 0) {
+        <label>
+          <span>Cuestionario</span>
+          <select class="quiz-select" [ngModel]="selectedQuizId()" (ngModelChange)="selectedQuizId.set($event)">
+            <option value="">Aleatorio</option>
+            @for (quiz of availableQuizzes(); track quiz.id) {
+              <option [value]="quiz.id">{{ quiz.title }}</option>
+            }
+          </select>
+        </label>
+      }
+
+      <button class="pixel-button" (click)="createRoom()" [disabled]="busy() || !displayName().trim()">
+        Crear sala
+      </button>
+
+      <div class="divider"><span>o unirse a una</span></div>
+
+      <div class="join-row">
+        <input [ngModel]="joinCode()" (ngModelChange)="joinCode.set($event)" maxlength="6" placeholder="Código de sala" />
+        <button
+          class="pixel-button pixel-button--secondary"
+          (click)="joinRoom()"
+          [disabled]="busy() || !displayName().trim() || !joinCode().trim()"
+        >
+          Unirse
+        </button>
+      </div>
+    </div>
+  } @else {
+    <div class="room">
+      <h2>Sala <span class="code">{{ socketService.roomCode() }}</span></h2>
+      @if (socketService.inviteLink()) {
+        <p class="invite">Enlace de invitación<code>{{ socketService.inviteLink() }}</code></p>
+      }
+
+      <ul class="players">
+        @for (player of socketService.lobbyPlayers(); track player.playerId) {
+          <li>
+            <app-pixel-icon name="player" [size]="16" />
+            <span>{{ player.displayName }}</span>
+            @if (player.isHost) {
+              <span class="host-tag"><app-pixel-icon name="host" [size]="12" />anfitrión</span>
+            }
+          </li>
+        }
+      </ul>
+
+      @if (socketService.isHost()) {
+        <button class="pixel-button" (click)="startMatch()" [disabled]="busy() || socketService.lobbyPlayers().length < 1">
+          Iniciar partida
+        </button>
+      } @else {
+        <p class="waiting">Esperando a que el anfitrión inicie&hellip;</p>
+      }
+    </div>
+  }
+</div>

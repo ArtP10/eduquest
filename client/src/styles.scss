@@ -1,0 +1,106 @@
+/* Design tokens — see docs/design-system.md for rationale. */
+:root {
+  --ucab-blue: #40b4e5;
+  --ucab-green: #047732;
+  --ucab-gold: #ffc526;
+  --ucab-ink: #0b1b24;
+  --ucab-ink-2: #142430;
+  --ucab-ink-3: #1e3444;
+  --ucab-paper: #f4f1e8;
+  --ucab-paper-dim: #a9bac4;
+  --danger: #e5484d;
+
+  --font-display: 'Press Start 2P', monospace;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-data: 'VT323', monospace;
+
+  --pixel-border: 4px;
+  --shadow-offset: 4px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--ucab-ink);
+  color: var(--ucab-paper);
+  font-family: var(--font-body);
+}
+
+button {
+  font-family: var(--font-body);
+}
+
+/* Shared "cabinet panel" and "pixel button" primitives, reused across
+   components instead of redefining hard-edged borders/shadows everywhere. */
+.pixel-panel {
+  background: var(--ucab-ink-2);
+  border: var(--pixel-border) solid var(--ucab-blue);
+  border-radius: 0;
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ucab-ink);
+}
+
+.pixel-button {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.9rem 1.25rem;
+  border: 3px solid var(--ucab-ink);
+  border-radius: 0;
+  cursor: pointer;
+  background: var(--ucab-gold);
+  color: var(--ucab-ink);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ucab-ink);
+  transition: none;
+
+  &:active:not(:disabled) {
+    transform: translate(var(--shadow-offset), var(--shadow-offset));
+    box-shadow: 0 0 0 var(--ucab-ink);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--ucab-paper);
+    outline-offset: 2px;
+  }
+}
+
+.pixel-button--secondary {
+  background: var(--ucab-ink-3);
+  color: var(--ucab-paper);
+  border-color: var(--ucab-blue);
+}
+
+.pixel-input {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 0.6rem 0.7rem;
+  border: 3px solid var(--ucab-blue);
+  border-radius: 0;
+  background: var(--ucab-ink);
+  color: var(--ucab-paper);
+  width: 100%;
+
+  &::placeholder {
+    color: var(--ucab-paper-dim);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--ucab-gold);
+    outline-offset: 2px;
+  }
+}
+
+.pixel-input--error {
+  border-color: var(--danger);
+}

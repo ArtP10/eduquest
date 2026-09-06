@@ -1,0 +1,181 @@
+.match {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 1000px;
+  padding: 0.4rem 1rem;
+  font-family: var(--font-data);
+  font-size: 1.15rem;
+  color: var(--ucab-paper);
+}
+
+.timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ucab-gold);
+}
+
+.next-action {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ucab-paper-dim);
+}
+
+.canvas-wrap {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  // NOT line-height:0 — that was meant to collapse the whitespace gap under
+  // the <canvas> element, but line-height is inherited, so every descendant
+  // text node (including the whole .overlay: questions, choices, etc.)
+  // inherited it too. Any text that wrapped to 2+ lines then had its lines
+  // collapse on top of each other — that was the "overlapping/garbled text"
+  // bug, not a flex issue. .phaser-host is already `display: flex`, which
+  // doesn't have the inline-canvas baseline-gap problem this trick was for,
+  // so it's not needed here at all.
+}
+
+.controls-hint {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  margin: 0;
+  padding: 0.3rem 0.5rem;
+  background: rgba(11, 27, 36, 0.85);
+  border: 1px solid var(--ucab-ink-3);
+  color: var(--ucab-paper-dim);
+  font-family: var(--font-data);
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(11, 27, 36, 0.94);
+  text-align: center;
+  // Safety net: a long Spanish question + 4 choices can exceed the canvas
+  // height. Without this, .canvas-wrap's overflow:hidden silently clipped
+  // whatever didn't fit (usually the top of the question or the bottom
+  // status line) instead of showing it.
+  overflow-y: auto;
+
+  h2 {
+    margin: 0;
+    flex-shrink: 0;
+    font-family: var(--font-body);
+    font-weight: 700;
+    color: var(--ucab-paper);
+    font-size: 1.1rem;
+  }
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 360px;
+}
+
+.choice {
+  padding: 0.75rem 1rem;
+  border: 3px solid var(--ucab-blue);
+  border-radius: 0;
+  background: var(--ucab-ink-2);
+  color: var(--ucab-paper);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ucab-ink);
+
+  &:active:not(:disabled) {
+    transform: translate(var(--shadow-offset), var(--shadow-offset));
+    box-shadow: 0 0 0 var(--ucab-ink);
+  }
+
+  &.selected {
+    background: var(--ucab-blue);
+    color: var(--ucab-ink);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &.static {
+    cursor: default;
+    box-shadow: none;
+  }
+
+  &.correct {
+    border-color: var(--ucab-green);
+    background: color-mix(in srgb, var(--ucab-green) 25%, var(--ucab-ink-2));
+    color: var(--ucab-paper);
+  }
+
+  &.incorrect {
+    border-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 25%, var(--ucab-ink-2));
+    color: var(--ucab-paper);
+  }
+}
+
+.choice-label {
+  // The actual bug fix: flex items default to min-width:auto, so a bare
+  // text node next to the icon refused to shrink below its single-line
+  // width and overflowed the button instead of wrapping — which, centered
+  // on top of the icon, rendered as overlapping/garbled text. Wrapping the
+  // text in its own flex-shrinkable span with min-width:0 lets it wrap
+  // normally.
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: break-word;
+}
+
+.waiting {
+  margin: 0;
+  color: var(--ucab-paper-dim);
+  font-size: 0.8rem;
+}
+
+.modifier {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+
+  &.boost {
+    color: var(--ucab-green);
+  }
+
+  &.slowdown {
+    color: var(--danger);
+  }
+}
