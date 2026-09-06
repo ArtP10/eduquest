@@ -1,8 +1,12 @@
-// PLACEHOLDER — replace with the real deployed backend URL before shipping
-// (mirrors the server's own placeholder convention, see server/.env.example).
-// This file is swapped in for environment.ts on `ng build` (production is
-// the default configuration) via angular.json's `fileReplacements`.
+// Deployed backend URL. Swapped in for environment.ts on `ng build`
+// (production is the default configuration) via angular.json's
+// `fileReplacements`. This is a public URL, not a secret.
+//
+// Use the service's PUBLIC https domain with NO port — Railway maps 443 on
+// the public domain to the container's internal port (8080). The
+// *.railway.internal address is server-to-server only and unreachable from
+// the browser.
 export const environment = {
   production: true,
-  apiUrl: 'https://REPLACE_WITH_PRODUCTION_API_URL'
+  apiUrl: 'https://eduquest-production-02fc.up.railway.app'
 };
