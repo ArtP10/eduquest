@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "description": "QuizJumper multiplayer-core: Node/TypeScript backend + Angular/Phaser frontend.",
+  "packageManager": "npm@11.13.0",
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || >=26"
+  },
   "workspaces": [
     "shared",
     "server",
