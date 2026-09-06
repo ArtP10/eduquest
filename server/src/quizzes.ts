@@ -1,4 +1,4 @@
-import type { Quiz } from '../../shared/quiz.js';
+import type { Quiz } from '@quizjumper/shared/quiz';
 
 // Quiz data shape: see shared/quiz.ts (Quiz, QuizQuestion).
 // Hardcoded per multiplayer-jumper-core scope — no authoring UI, no persistence.

@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
-import type { ClientToServerEvents, ServerToClientEvents } from '../../shared/events.js';
+import type { ClientToServerEvents, ServerToClientEvents } from '@quizjumper/shared/events';
 
 import { createRoom, getRoom, deleteRoom, addPlayer, removePlayerBySocketId } from './rooms.js';
 import { startMatch, submitAnswer, setClimbProgress, broadcastLobby } from './match.js';

@@ -4,7 +4,7 @@ import type {
   ServerToClientEvents,
   LeaderboardEntry,
   AnswerResult
-} from '../../shared/events.js';
+} from '@quizjumper/shared/events';
 import { connectedPlayerIds, getLobbyPlayerList, type Room } from './rooms.js';
 import { scoreAnswer, placementBonusForRank, rankPlayersByClimbProgress } from './scoring.js';
 

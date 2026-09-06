@@ -1,0 +1,15 @@
+{
+  "name": "@quizjumper/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Type-only contracts shared between the QuizJumper server and client.",
+  "exports": {
+    "./events": "./events.ts",
+    "./quiz": "./quiz.ts"
+  },
+  "files": [
+    "events.ts",
+    "quiz.ts"
+  ]
+}
