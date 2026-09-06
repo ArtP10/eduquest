@@ -24,8 +24,11 @@ are created. This is why every Railway service below uses **Root Directory = `/`
 | Start Command    | `npm run start -w server`              |
 | Watch Paths      | `server/**`, `shared/**`               |
 
-`server/railway.json` already encodes the build/start commands, so once the
-Config File path is set the commands do not need to be entered by hand.
+Railway only reads a config file at the repo root automatically. Because this
+is a two-service monorepo, each service must point at its own file:
+**Settings → Config-as-code → Railway Config File → `server/railway.json`**
+(or `client/railway.json`). Without that, set the Build/Start commands
+directly in the service Settings instead — the values are the same.
 
 Required environment variables: see `server/.env.example`.
 
@@ -47,6 +50,10 @@ subfolder is flattened away by the `outputPath` override in `angular.json`).
 `serve:static` runs the `serve` package over that folder as an SPA (`-s`, so
 deep links fall back to `index.html`); `serve` binds to Railway's `$PORT`
 automatically.
+
+Alternative with no start command: set the env var
+`RAILPACK_SPA_OUTPUT_DIR=client/dist/client` on the client service. Railpack
+then serves the folder with Caddy and ignores `serve:static`.
 
 Before the first production build, set `apiUrl` in
 `client/src/environments/environment.prod.ts` to the deployed server URL.
