@@ -34,16 +34,22 @@ Required environment variables: see `server/.env.example`.
 The client build resolves `@quizjumper/shared` the same way — so it also needs
 Root Directory = `/`.
 
-| Setting          | Value                                                     |
-| ---------------- | -------------------------------------------------------- |
-| Root Directory   | `/`                                                      |
-| Build Command    | `npm ci && npm run build -w client`                      |
-| Output           | `client/dist/client/browser` (static)                    |
-| Watch Paths      | `client/**`, `shared/**`                                 |
+| Setting          | Value                                  |
+| ---------------- | -------------------------------------- |
+| Root Directory   | `/`                                    |
+| Config File      | `client/railway.json`                  |
+| Build Command    | `npm ci && npm run build -w client`    |
+| Start Command    | `npm run serve:static -w client`       |
+| Watch Paths      | `client/**`, `shared/**`               |
 
-Serving the static output (static host, `serve`, or Caddy) is not wired in this
-repo yet — see `risks.md`. Also set `client/src/environments/environment.prod.ts`
-`apiUrl` to the deployed server URL before the first production build.
+`ng build` only emits static files (to `client/dist/client` — the `browser`
+subfolder is flattened away by the `outputPath` override in `angular.json`).
+`serve:static` runs the `serve` package over that folder as an SPA (`-s`, so
+deep links fall back to `index.html`); `serve` binds to Railway's `$PORT`
+automatically.
+
+Before the first production build, set `apiUrl` in
+`client/src/environments/environment.prod.ts` to the deployed server URL.
 
 ## Why not build from inside `server/` or `client/`
 

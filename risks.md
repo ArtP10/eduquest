@@ -9,6 +9,15 @@
 - Existing Railway services must change Root Directory to `/` and pick up `server/railway.json`. Old per-subfolder config will still fail until updated.
 
 **Technical debt / follow-ups**
-- Client static serving on Railway is not wired (no `serve`/host config). See `docs/deployment.md`.
 - `client/src/environments/environment.prod.ts` still has a placeholder `apiUrl`.
 - `.nvmrc` / `engines` pin absent — local Node drift will keep biting Angular builds.
+
+## [2026-09-05] Wire client static serving on Railway
+
+**Risks**
+- `serve` (v14) serves the SPA and reads `$PORT` from the env — verified locally (SPA fallback returns 200 on deep routes). It is HTTP-only with no compression/caching tuning; fine for a demo, not a CDN.
+- `angular.json` `outputPath` override flattens output to `client/dist/client` (drops the `browser/` subfolder). Any script referencing the old `dist/client/browser` path must be updated.
+- `serve` is a full runtime dependency now (adds ~90 transitive packages to the client).
+
+**Technical debt / follow-ups**
+- For production, consider a real static host / CDN instead of `serve`.
