@@ -1,0 +1,33 @@
+<app-pixel-panel title="Crear cuenta" class="signup">
+  @if (error(); as message) {
+    <p class="error">{{ message }}</p>
+  }
+
+  <form (submit)="$event.preventDefault(); submit()">
+    <app-pixel-input label="Usuario" autocomplete="username" [value]="username()" (valueChange)="username.set($event)" />
+    <app-pixel-input label="Correo" type="email" autocomplete="email" [value]="email()" (valueChange)="email.set($event)" />
+    <app-pixel-input
+      label="Contraseña"
+      type="password"
+      placeholder="Mínimo 8 caracteres"
+      autocomplete="new-password"
+      [value]="password()"
+      (valueChange)="password.set($event)"
+    />
+    <app-pixel-button type="submit" [disabled]="!canSubmit">Crear cuenta</app-pixel-button>
+  </form>
+
+  <div class="divider"><span>o</span></div>
+
+  <app-pixel-button variant="secondary" [disabled]="busy()" (click)="signInWithGoogle()">
+    <span class="google-button-content">
+      <img src="/icons/google.webp" alt="" width="18" height="18" />
+      Crear cuenta con Google
+    </span>
+  </app-pixel-button>
+
+  <p class="switch">
+    ¿Ya tienes cuenta?
+    <button type="button" class="link" (click)="switchToLogin.emit()">Iniciar sesión</button>
+  </p>
+</app-pixel-panel>

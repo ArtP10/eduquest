@@ -1,0 +1,13 @@
+<main class="app-shell">
+  <header class="title-bar">
+    <app-pixel-icon name="ucab-mark" [size]="24" />
+    <h1>QuizJumper</h1>
+    <nav class="main-nav">
+      <a routerLink="/">Jugar</a>
+      <a routerLink="/quizzes">Mis cuestionarios</a>
+    </nav>
+    <app-auth-header />
+  </header>
+
+  <router-outlet />
+</main>

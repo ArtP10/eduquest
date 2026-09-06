@@ -1,0 +1,28 @@
+<app-pixel-panel title="Mis cuestionarios" class="my-quizzes">
+  <form class="new-quiz" (submit)="$event.preventDefault(); createQuiz()">
+    <app-pixel-input label="Nuevo cuestionario" placeholder="Título del cuestionario" [value]="newTitle()" (valueChange)="newTitle.set($event)" />
+    <app-pixel-button type="submit" [disabled]="creating() || !newTitle().trim()">Crear cuestionario</app-pixel-button>
+  </form>
+  @if (createError(); as message) {
+    <p class="error">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="hint">Cargando…</p>
+  } @else if (loadError()) {
+    <p class="error">{{ loadError() }}</p>
+  } @else if (quizzes().length === 0) {
+    <p class="hint">Todavía no has creado ningún cuestionario.</p>
+  } @else {
+    <ul class="quiz-list">
+      @for (quiz of quizzes(); track quiz.id) {
+        <li>
+          <a [routerLink]="['/quizzes', quiz.id]">{{ quiz.title }}</a>
+          <span class="status" [class.status--published]="quiz.status === 'published'">
+            {{ quiz.status === 'published' ? 'Publicado' : 'Borrador' }}
+          </span>
+        </li>
+      }
+    </ul>
+  }
+</app-pixel-panel>

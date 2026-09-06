@@ -1,0 +1,25 @@
+<div class="auth-header">
+  @if (authService.isAuthenticated()) {
+    <span class="username">{{ authService.currentUser()?.username }}</span>
+    <button type="button" class="link" (click)="logout()">Cerrar sesión</button>
+  } @else {
+    <button type="button" class="link" (click)="openLogin()">Iniciar sesión</button>
+  }
+</div>
+
+@if (panel() !== 'closed') {
+  <div class="auth-overlay" (click)="closePanel()">
+    <div class="auth-overlay-content" (click)="$event.stopPropagation()">
+      <div class="close-button">
+        <app-pixel-button variant="secondary" size="compact" (click)="closePanel()">Cerrar ✕</app-pixel-button>
+      </div>
+      @if (panel() === 'login') {
+        <app-login (switchToSignup)="openSignup()" (close)="closePanel()" />
+      } @else if (panel() === 'signup') {
+        <app-signup (switchToLogin)="openLogin()" (close)="closePanel()" />
+      } @else if (panel() === 'google-username') {
+        <app-google-username-step (close)="closePanel()" />
+      }
+    </div>
+  </div>
+}

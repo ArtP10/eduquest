@@ -1,0 +1,14 @@
+<app-pixel-panel title="Elige tu usuario" class="google-username-step">
+  <p class="hint">Tu cuenta de Google está lista. Elige un nombre de usuario para terminar de crear tu cuenta.</p>
+
+  @if (error(); as message) {
+    <p class="error">{{ message }}</p>
+  }
+
+  <form (submit)="$event.preventDefault(); submit()">
+    <app-pixel-input label="Usuario" autocomplete="username" [value]="username()" (valueChange)="username.set($event)" />
+    <app-pixel-button type="submit" [disabled]="busy() || !username().trim()">Crear cuenta</app-pixel-button>
+  </form>
+
+  <button type="button" class="link" (click)="cancel()">Cancelar</button>
+</app-pixel-panel>

@@ -1,0 +1,73 @@
+<div class="match">
+  <div class="hud pixel-panel">
+    <span class="question-counter">P{{ socketService.questionIndex() + 1 }}/{{ socketService.totalQuestions() }}</span>
+    @if (socketService.matchPhase() === 'climbing' || socketService.matchPhase() === 'frozen' || socketService.matchPhase() === 'results') {
+      <span class="timer">
+        <app-pixel-icon name="timer" [size]="14" />
+        {{ secondsLeft() }}
+        <span class="next-action">{{ nextActionLabel() }}</span>
+      </span>
+    }
+  </div>
+
+  <div class="canvas-wrap pixel-panel">
+    <app-phaser-board />
+
+    @if (socketService.matchPhase() === 'climbing') {
+      <p class="controls-hint">WASD mover &middot; ESPACIO saltar</p>
+    }
+
+    @if (socketService.matchPhase() === 'frozen' && socketService.currentQuestion(); as question) {
+      <div class="overlay freeze">
+        <h2>{{ question.text }}</h2>
+        <div class="choices">
+          @for (choice of question.choices; track $index) {
+            <button
+              class="choice"
+              [class.selected]="selectedChoice() === $index"
+              [disabled]="hasSubmitted()"
+              (click)="selectChoice($index)"
+            >
+              <span class="choice-label">{{ choice }}</span>
+            </button>
+          }
+        </div>
+        @if (hasSubmitted()) {
+          <p class="waiting">Respuesta bloqueada &mdash; esperando a los demás jugadores&hellip;</p>
+        }
+      </div>
+    }
+
+    @if (socketService.matchPhase() === 'results' && socketService.currentQuestion(); as question) {
+      <div class="overlay results">
+        <h2>{{ question.text }}</h2>
+        <div class="choices">
+          @for (choice of question.choices; track $index) {
+            <div
+              class="choice static"
+              [class.correct]="resultFor($index) === 'correct'"
+              [class.incorrect]="resultFor($index) === 'incorrect'"
+            >
+              @if (resultFor($index) === 'correct') {
+                <app-pixel-icon name="correct" [size]="14" />
+              }
+              @if (resultFor($index) === 'incorrect') {
+                <app-pixel-icon name="incorrect" [size]="14" />
+              }
+              <span class="choice-label">{{ choice }}</span>
+            </div>
+          }
+        </div>
+        <p class="modifier" [class.boost]="socketService.myModifier() === 'boost'" [class.slowdown]="socketService.myModifier() === 'slowdown'">
+          @if (socketService.myModifier() === 'boost') {
+            <app-pixel-icon name="boost" [size]="16" />
+            ¡Correcto! Impulso en la próxima subida
+          } @else {
+            <app-pixel-icon name="slowdown" [size]="16" />
+            Incorrecto &mdash; enlentecimiento en la próxima subida
+          }
+        </p>
+      </div>
+    }
+  </div>
+</div>

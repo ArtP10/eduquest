@@ -1,0 +1,58 @@
+.leaderboard {
+  width: 220px;
+  padding: 1.25rem;
+
+  h3 {
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    color: var(--ucab-paper);
+  }
+
+  ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    background: var(--ucab-ink-3);
+    border-left: 3px solid transparent;
+
+    &.me {
+      border-left-color: var(--ucab-blue);
+    }
+
+    &.first {
+      background: color-mix(in srgb, var(--ucab-gold) 18%, var(--ucab-ink-3));
+    }
+  }
+
+  .rank {
+    width: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    color: var(--ucab-paper-dim);
+    font-family: var(--font-data);
+    font-size: 1.1rem;
+  }
+
+  .name {
+    flex: 1;
+    font-size: 0.85rem;
+    color: var(--ucab-paper);
+  }
+
+  .score {
+    font-family: var(--font-data);
+    font-size: 1.3rem;
+    color: var(--ucab-gold);
+  }
+}
