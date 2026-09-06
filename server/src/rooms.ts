@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
-import type { Quiz, QuizQuestion } from '../../shared/quiz.js';
-import type { LobbyPlayer, Modifier } from '../../shared/events.js';
+import type { Quiz, QuizQuestion } from '@quizjumper/shared/quiz';
+import type { LobbyPlayer, Modifier } from '@quizjumper/shared/events';
 
 export type MatchPhase = 'lobby' | 'climbing' | 'frozen' | 'results' | 'ended';
 

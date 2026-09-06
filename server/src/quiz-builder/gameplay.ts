@@ -1,4 +1,4 @@
-import type { Quiz, QuizQuestion } from '../../../shared/quiz.js';
+import type { Quiz, QuizQuestion } from '@quizjumper/shared/quiz';
 import { getQuizById, loadQuizzes, pickRandomQuiz } from '../quizzes.js';
 import { listPublishedQuizzes, findQuizById } from './quizzes.js';
 import { listQuestionsByQuiz } from './questions.js';
