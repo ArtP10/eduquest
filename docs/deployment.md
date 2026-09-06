@@ -16,44 +16,42 @@ are created. This is why every Railway service below uses **Root Directory = `/`
 
 ## Server service
 
-| Setting          | Value                                  |
-| ---------------- | -------------------------------------- |
-| Root Directory   | `/`                                    |
-| Config File      | `server/railway.json`                  |
-| Build Command    | `npm ci && npm run build -w server`    |
-| Start Command    | `npm run start -w server`              |
-| Watch Paths      | `server/**`, `shared/**`               |
+Set these in the service **Settings**. (Config-as-code / per-service
+`railway.json` is deprecated and locked for services that never used it, so
+every service here configures commands in the dashboard.)
 
-Railway only reads a config file at the repo root automatically. Because this
-is a two-service monorepo, each service must point at its own file:
-**Settings → Config-as-code → Railway Config File → `server/railway.json`**
-(or `client/railway.json`). Without that, set the Build/Start commands
-directly in the service Settings instead — the values are the same.
+| Setting              | Value                                  |
+| -------------------- | -------------------------------------- |
+| Root Directory       | `/`                                    |
+| Custom Build Command | `npm ci && npm run build -w server`    |
+| Custom Start Command | `npm run start -w server`              |
+| Watch Paths          | `server/**`, `shared/**`               |
 
 Required environment variables: see `server/.env.example`.
 
 ## Client service (Angular)
 
 The client build resolves `@quizjumper/shared` the same way — so it also needs
-Root Directory = `/`.
+Root Directory = `/`. `ng build` only emits static files (to `client/dist/client`
+— the `browser` subfolder is flattened away by the `outputPath` override in
+`angular.json`), so the service needs something to serve them.
 
-| Setting          | Value                                  |
-| ---------------- | -------------------------------------- |
-| Root Directory   | `/`                                    |
-| Config File      | `client/railway.json`                  |
-| Build Command    | `npm ci && npm run build -w client`    |
-| Start Command    | `npm run serve:static -w client`       |
-| Watch Paths      | `client/**`, `shared/**`               |
+**Recommended — let Railpack serve them with Caddy.** No start command:
 
-`ng build` only emits static files (to `client/dist/client` — the `browser`
-subfolder is flattened away by the `outputPath` override in `angular.json`).
-`serve:static` runs the `serve` package over that folder as an SPA (`-s`, so
-deep links fall back to `index.html`); `serve` binds to Railway's `$PORT`
-automatically.
+| Setting              | Value                                  |
+| -------------------- | -------------------------------------- |
+| Root Directory       | `/`                                    |
+| Custom Build Command | `npm ci && npm run build -w client`    |
+| Custom Start Command | *(empty)*                              |
+| Watch Paths          | `client/**`, `shared/**`               |
 
-Alternative with no start command: set the env var
-`RAILPACK_SPA_OUTPUT_DIR=client/dist/client` on the client service. Railpack
-then serves the folder with Caddy and ignores `serve:static`.
+Plus one variable: `RAILPACK_SPA_OUTPUT_DIR=client/dist/client`. Caddy binds
+`0.0.0.0:$PORT` itself and does SPA fallback.
+
+**Fallback — the `serve` package.** Custom Start Command
+`npm run serve:static -w client`. The script forces `-l tcp://0.0.0.0:$PORT`;
+without the explicit host `serve` binds `localhost` only and Railway's proxy
+gets "Application failed to respond".
 
 Before the first production build, set `apiUrl` in
 `client/src/environments/environment.prod.ts` to the deployed server URL.
