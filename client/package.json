@@ -6,11 +6,13 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "serve:static": "serve -s dist/client"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
   "dependencies": {
+    "@quizjumper/shared": "*",
     "@angular/common": "^22.1.0",
     "@angular/compiler": "^22.1.0",
     "@angular/core": "^22.1.0",
@@ -20,6 +22,7 @@
     "phaser": "^4.2.1",
     "rxjs": "~7.8.0",
     "socket.io-client": "^4.8.3",
+    "serve": "^14.2.4",
     "tslib": "^2.3.0"
   },
   "devDependencies": {

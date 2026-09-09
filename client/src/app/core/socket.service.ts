@@ -14,7 +14,7 @@ import type {
   RoomJoinResponse,
   RoomStartResponse,
   AnswerSubmitResponse
-} from '../../../../shared/events';
+} from '@quizjumper/shared/events';
 
 @Injectable({ providedIn: 'root' })
 export class SocketService {
