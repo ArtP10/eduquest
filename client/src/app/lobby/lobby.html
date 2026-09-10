@@ -10,19 +10,7 @@
         <input [ngModel]="displayName()" (ngModelChange)="displayName.set($event)" maxlength="20" placeholder="Tu nombre" />
       </label>
 
-      @if (availableQuizzes().length > 0) {
-        <label>
-          <span>Cuestionario</span>
-          <select class="quiz-select" [ngModel]="selectedQuizId()" (ngModelChange)="selectedQuizId.set($event)">
-            <option value="">Aleatorio</option>
-            @for (quiz of availableQuizzes(); track quiz.id) {
-              <option [value]="quiz.id">{{ quiz.title }}</option>
-            }
-          </select>
-        </label>
-      }
-
-      <button class="pixel-button" (click)="createRoom()" [disabled]="busy() || !displayName().trim()">
+      <button class="pixel-button" (click)="createRoom()" [disabled]="!displayName().trim()">
         Crear sala
       </button>
 

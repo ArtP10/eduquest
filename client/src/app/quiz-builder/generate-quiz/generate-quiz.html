@@ -1,0 +1,42 @@
+<app-pixel-panel title="Generar desde PDF" class="generate-quiz">
+  @if (generating()) {
+    <div class="loading-state" role="status" aria-live="polite">
+      <div class="loading-blocks">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <p class="loading-text">Generando cuestionario…</p>
+      <p class="hint">Esto puede tardar unos segundos.</p>
+    </div>
+  } @else if (error(); as message) {
+    <div class="error-state">
+      <p class="error">{{ message }}</p>
+      <app-pixel-button (click)="tryAgain()">Intentar de nuevo</app-pixel-button>
+    </div>
+  } @else {
+    <form class="generate-form" (submit)="$event.preventDefault(); generate()">
+      <label class="field">
+        <span class="field-label">Archivo PDF</span>
+        <input class="file-input" type="file" accept="application/pdf" (change)="onFileSelected($event)" />
+        @if (selectedFile(); as file) {
+          <span class="file-name">{{ file.name }}</span>
+        }
+      </label>
+
+      <label class="field">
+        <span class="field-label">Número de preguntas: {{ questionCount() }}</span>
+        <input
+          class="count-range"
+          type="range"
+          [min]="minQuestions"
+          [max]="maxQuestions"
+          [step]="step"
+          [value]="questionCount()"
+          (input)="onQuestionCountInput($event)"
+        />
+      </label>
+
+      <app-pixel-button type="submit" [disabled]="!canSubmit()">Generar cuestionario</app-pixel-button>
+      <a class="cancel-link" [routerLink]="['/quizzes']">Cancelar</a>
+    </form>
+  }
+</app-pixel-panel>

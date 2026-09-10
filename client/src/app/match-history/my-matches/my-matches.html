@@ -1,0 +1,27 @@
+<app-pixel-panel title="Mis partidas" class="my-matches">
+  @if (loading()) {
+    <p class="hint">Cargando…</p>
+  } @else if (loadError()) {
+    <p class="error">{{ loadError() }}</p>
+  } @else if (matches().length === 0) {
+    <p class="hint">Todavía no has jugado ninguna partida.</p>
+  } @else {
+    <ul class="match-list">
+      @for (match of matches(); track match.id) {
+        <li>
+          <a [routerLink]="['/matches', match.id]" class="match-link">
+            <span class="match-title">{{ match.quizTitle }}</span>
+            <span class="match-date">{{ match.playedAt | date: 'medium' }}</span>
+          </a>
+          <span class="match-figures">
+            @if (match.isHost) {
+              <span class="host-badge">Anfitrión</span>
+            }
+            <span class="placement">#{{ match.finalPlacement }}</span>
+            <span class="score">{{ match.finalScore }} pts</span>
+          </span>
+        </li>
+      }
+    </ul>
+  }
+</app-pixel-panel>

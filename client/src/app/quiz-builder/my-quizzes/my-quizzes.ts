@@ -34,7 +34,7 @@ export class MyQuizzes {
       this.quizzes.set(await this.quizBuilderService.listMine());
       this.loadError.set(null);
     } catch {
-      this.loadError.set('Could not load your quizzes. Please try again.');
+      this.loadError.set('No se pudieron cargar tus cuestionarios. Por favor, intenta de nuevo.');
     } finally {
       this.loading.set(false);
     }

@@ -17,6 +17,10 @@
   gap: 1rem;
 }
 
+.generate-entry {
+  display: flex;
+}
+
 .error {
   margin: 0;
   color: var(--danger);

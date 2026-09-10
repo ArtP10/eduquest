@@ -9,6 +9,8 @@ export interface Player {
   socketId: string;
   connected: boolean;
   climbProgress: number;
+  /** Set when the player was logged in (valid authToken) at room:create/room:join time. Undefined for guests. */
+  userId?: string;
 }
 
 export interface SubmittedAnswer {
@@ -17,10 +19,23 @@ export interface SubmittedAnswer {
 }
 
 export interface PlayerScore {
-  correctness: number;
-  speed: number;
-  placement: number;
-  total: number;
+  correctAnswers: number;
+  questionsAnswered: number;
+}
+
+export interface MatchAnswerRecord {
+  playerId: string;
+  questionIndex: number;
+  // Snapshot of the question as presented to this room — `questions` rows
+  // aren't a reliable source for this later: a room's question/choice order
+  // is shuffled per-room (see shuffleQuizForRoom), and a sample quiz's
+  // questions have no `questions` row at all (see design.md decision 6).
+  questionText: string;
+  choices: [string, string, string, string];
+  correctChoiceIndex: 0 | 1 | 2 | 3;
+  selectedChoiceIndex: 0 | 1 | 2 | 3 | null;
+  isCorrect: boolean;
+  answerTimeMs: number | null;
 }
 
 export interface Room {
@@ -36,6 +51,10 @@ export interface Room {
   modifiers: Map<string, Modifier>;
   phaseTimer: NodeJS.Timeout | null;
   phaseEndsAt: number | null;
+  // Accumulated across the whole match (unlike `answers`, which is reset
+  // every question) so match history has every player's per-question result
+  // once the match ends — see design.md decision 3.
+  answerLog: MatchAnswerRecord[];
 }
 
 // Unambiguous alphabet (no 0/O/1/I) for typeable room codes.
@@ -97,7 +116,8 @@ export function createRoom({ baseUrl = '', quiz }: { baseUrl?: string; quiz: Qui
     scores: new Map(),
     modifiers: new Map(),
     phaseTimer: null,
-    phaseEndsAt: null
+    phaseEndsAt: null,
+    answerLog: []
   };
   rooms.set(code, room);
   return room;
@@ -115,7 +135,7 @@ export function deleteRoom(code: string): void {
 
 export function addPlayer(
   room: Room,
-  { displayName, socketId }: { displayName: string; socketId: string }
+  { displayName, socketId, userId }: { displayName: string; socketId: string; userId?: string }
 ): { playerId: string; isHost: boolean } {
   const playerId = crypto.randomUUID();
   const isHost = room.players.size === 0;
@@ -123,9 +143,10 @@ export function addPlayer(
     displayName,
     socketId,
     connected: true,
-    climbProgress: 0
+    climbProgress: 0,
+    userId
   });
-  room.scores.set(playerId, { correctness: 0, speed: 0, placement: 0, total: 0 });
+  room.scores.set(playerId, { correctAnswers: 0, questionsAnswered: 0 });
   room.modifiers.set(playerId, 'none');
   if (isHost) room.hostPlayerId = playerId;
   return { playerId, isHost };

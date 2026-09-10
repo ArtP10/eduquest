@@ -31,11 +31,6 @@
     mask-image: radial-gradient(ellipse 75% 65% at center 70%, black 35%, transparent 82%);
     pointer-events: none;
   }
-
-  > * {
-    position: relative;
-    z-index: 1;
-  }
 }
 
 // Selector shape (`.app-shell > .title-bar`, two segments) deliberately

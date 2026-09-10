@@ -1,0 +1,85 @@
+@if (loading()) {
+  <app-pixel-panel title="Detalle de la partida" class="match-detail">
+    <p class="hint">Cargando…</p>
+  </app-pixel-panel>
+} @else if (loadError()) {
+  <app-pixel-panel title="Detalle de la partida" class="match-detail">
+    <p class="error">{{ loadError() }}</p>
+    <a routerLink="/matches" class="back-link">&larr; Volver a mis partidas</a>
+  </app-pixel-panel>
+} @else if (match(); as m) {
+  <app-pixel-panel [title]="m.quizTitle" class="match-detail">
+    <p class="played-at">{{ m.playedAt | date: 'medium' }}</p>
+
+    @if (m.quizGlobalStats; as stats) {
+      <p class="global-average">Promedio global del cuestionario: {{ stats.averageGrade }}/100</p>
+    }
+
+    <h3 class="section-title">Tabla de posiciones</h3>
+    <ul class="leaderboard">
+      @for (entry of m.leaderboard; track entry.matchPlayerId) {
+        <li>
+          <div class="leaderboard-row">
+            <span class="rank">#{{ entry.finalPlacement }}</span>
+            <span class="nickname">{{ entry.nickname }}</span>
+            <span class="score">{{ entry.finalScore }} pts</span>
+            @if (canDrillDown(entry.matchPlayerId, entry.userId)) {
+              <app-pixel-button variant="secondary" size="compact" (click)="toggleDrillDown(entry.matchPlayerId)">
+                {{ expandedMatchPlayerId() === entry.matchPlayerId ? 'Ocultar' : 'Ver respuestas' }}
+              </app-pixel-button>
+            }
+          </div>
+
+          @if (expandedMatchPlayerId() === entry.matchPlayerId) {
+            <div class="drill-down">
+              @if (drillDownLoading() === entry.matchPlayerId) {
+                <p class="hint">Cargando respuestas…</p>
+              } @else if (drillDownError()) {
+                <p class="error">{{ drillDownError() }}</p>
+              } @else if (answersByMatchPlayerId()[entry.matchPlayerId]; as answers) {
+                <p class="drill-down-score">
+                  Puntaje: {{ scoreSummary(answers).correct }}/{{ scoreSummary(answers).total }}
+                  ({{ scoreSummary(answers).percent }}%)
+                </p>
+                <ol class="question-review">
+                  @for (answer of answers; track answer.questionIndex) {
+                    <li class="question-review-item">
+                      <p class="question-review-text">{{ answer.questionIndex + 1 }}. {{ answer.questionText }}</p>
+                      <ul class="choice-review-list">
+                        @for (choice of answer.choices; track $index) {
+                          <li
+                            class="choice-review"
+                            [class.choice-review--correct]="$index === answer.correctChoiceIndex"
+                            [class.choice-review--wrong-pick]="$index === answer.selectedChoiceIndex && $index !== answer.correctChoiceIndex"
+                          >
+                            <span>{{ choice }}</span>
+                            @if ($index === answer.selectedChoiceIndex) {
+                              <span class="choice-tag">Tu respuesta</span>
+                            }
+                            @if ($index === answer.correctChoiceIndex) {
+                              <span class="choice-tag">Correcta</span>
+                            }
+                          </li>
+                        }
+                      </ul>
+                      @if (answer.selectedChoiceIndex === null) {
+                        <p class="no-answer">No respondió a tiempo</p>
+                      }
+                    </li>
+                  }
+                </ol>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+
+    @if (questionStatRows.length > 0) {
+      <h3 class="section-title">Estadísticas por pregunta</h3>
+      <app-pixel-question-stats [rows]="questionStatRows" />
+    }
+
+    <a routerLink="/matches" class="back-link">&larr; Volver a mis partidas</a>
+  </app-pixel-panel>
+}

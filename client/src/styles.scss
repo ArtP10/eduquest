@@ -35,6 +35,23 @@ button {
   font-family: var(--font-body);
 }
 
+/* Lifts every direct child of the app shell above its fixed campus-image
+   backdrop (see app.scss's .app-shell::before). Deliberately global/unscoped
+   rather than defined in app.component's own (encapsulated) stylesheet:
+   Angular's emulated encapsulation compiles a scoped "parent > *" selector to
+   "[_ngcontent-X] > *[_ngcontent-X]", which only matches children that carry
+   the SAME content attribute as the parent template. A <router-outlet>
+   injected component's host element gets its own [_nghost-Y] instead, never
+   the parent's [_ngcontent-X], so a scoped version of this rule silently
+   never matches any routed page's root component — exactly the bug that let
+   the campus backdrop show through the Quiz Library page (tall/wide enough
+   to reach the unfaded part of the backdrop; other routed screens happened
+   to sit in its faded/masked region, hiding the same latent bug). */
+.app-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* Shared "cabinet panel" and "pixel button" primitives, reused across
    components instead of redefining hard-edged borders/shadows everywhere. */
 .pixel-panel {

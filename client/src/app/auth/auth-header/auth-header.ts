@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { Login } from '../login/login';
 import { Signup } from '../signup/signup';
@@ -16,6 +17,7 @@ type AuthPanel = 'closed' | 'login' | 'signup' | 'google-username';
 })
 export class AuthHeader {
   protected readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   readonly panel = signal<AuthPanel>('closed');
 
@@ -53,5 +55,6 @@ export class AuthHeader {
 
   async logout(): Promise<void> {
     await this.authService.logout();
+    this.router.navigate(['/']);
   }
 }

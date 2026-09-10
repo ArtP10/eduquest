@@ -46,7 +46,6 @@ const SLOWDOWN_SPEED_MULTIPLIER = 0.65;
 
 // UCAB brand palette (see docs/design-system.md) — hardcoded as Phaser hex
 // numbers since the canvas can't read CSS custom properties.
-const UCAB_BLUE = 0x40b4e5;
 const UCAB_GOLD = 0xffc526;
 const UCAB_INK = 0x0b1b24;
 const UCAB_INK_2 = 0x142430;
@@ -82,6 +81,19 @@ const SPAWN_GAP_ABOVE_FLOOR = 18;
 const PLATFORM_OVERLAP_MARGIN = 6;
 const PLATFORM_MIN_SPACING_X = PLATFORM_WIDTH + PLATFORM_OVERLAP_MARGIN;
 const PLATFORM_MIN_SPACING_Y = PLATFORM_HEIGHT + PLATFORM_OVERLAP_MARGIN;
+// A platform whose x is close enough to overlap the column a player stands
+// in on the platform below it acts as a literal ceiling for them — it needs
+// enough clearance to stand at full height *and* jump, not just enough gap
+// to avoid visually touching (PLATFORM_MIN_SPACING_Y). Without this, a small
+// horizontal step (as low as PLATFORM_X_GAP_MIN) combined with a low roll of
+// the normal vertical gap range could land a platform closer overhead than
+// the player is tall, physically wedging them between the two platforms with
+// no way to jump out — the "stuck between platforms" bug this guards
+// against. Only matters when horizontally close; a platform well to the side
+// isn't a ceiling for anyone standing directly below it.
+const HEADROOM_X_THRESHOLD = PLATFORM_WIDTH;
+const HEADROOM_MARGIN = 15;
+const HEADROOM_MIN_GAP = PLAYER_HEIGHT + HEADROOM_MARGIN;
 
 interface PlatformPlacement {
   x: number;
@@ -126,6 +138,7 @@ export class JumperScene extends Phaser.Scene {
     for (const key of ['idle1', 'idle2', 'idle3', 'idle4', 'walk1', 'walk2', 'walk3', 'walk4', 'jump1', 'jump2', 'jump3', 'jump4']) {
       this.load.image(key, `sprites/${key}.png`);
     }
+    this.load.image('worldBackdrop', 'sprites/download.png');
   }
 
   create(): void {
@@ -246,12 +259,16 @@ export class JumperScene extends Phaser.Scene {
     if (this.player.y < this.highestY) {
       this.highestY = this.player.y;
       this.generatePlatformsUpTo(this.highestY - 800);
+    }
 
-      const progress = Math.max(0, this.startY - this.highestY);
-      if (progress - this.lastReportedProgress >= 10) {
-        this.lastReportedProgress = progress;
-        this.onProgress(progress);
-      }
+    // Live height, tied to the player's current position (not the
+    // best-ever one) so it rises and falls immediately as they climb or
+    // fall — unlike `highestY` above, which only ratchets up for world
+    // generation.
+    const currentProgress = Math.max(0, this.startY - this.player.y);
+    if (Math.abs(currentProgress - this.lastReportedProgress) >= 10) {
+      this.lastReportedProgress = currentProgress;
+      this.onProgress(currentProgress);
     }
 
     // Camera follows the player both up (climbing) and down (falling), so
@@ -330,11 +347,24 @@ export class JumperScene extends Phaser.Scene {
     this.add.rectangle(x, y - height / 2 + highlightHeight / 2, width - 4, highlightHeight, highlightColor);
   }
 
-  /** True if (x, y) is closer than the overlap margin to any already-placed platform, from either this row or the one directly below it. */
+  /**
+   * True if (x, y) is closer than the overlap margin to any already-placed
+   * platform, from either this row or the one directly below it — OR, for
+   * the row directly below specifically, closer than full player headroom
+   * while horizontally overlapping its column (see HEADROOM_MIN_GAP above).
+   */
   private overlapsExisting(x: number, y: number, rowPlacements: PlatformPlacement[]): boolean {
     const isTooClose = (p: PlatformPlacement) =>
       Math.abs(p.x - x) < PLATFORM_MIN_SPACING_X && Math.abs(p.y - y) < PLATFORM_MIN_SPACING_Y;
-    return rowPlacements.some(isTooClose) || this.previousRowPlacements.some(isTooClose);
+    // previousRowPlacements sit below this row (larger y — up is negative),
+    // so they're the "floor" a player could be standing on directly beneath
+    // this candidate platform.
+    const blocksHeadroom = (p: PlatformPlacement) =>
+      Math.abs(p.x - x) < HEADROOM_X_THRESHOLD && p.y > y && p.y - y < HEADROOM_MIN_GAP;
+    return (
+      rowPlacements.some(isTooClose) ||
+      this.previousRowPlacements.some((p) => isTooClose(p) || blocksHeadroom(p))
+    );
   }
 
   private generatePlatformsUpTo(targetY: number): void {
@@ -350,8 +380,6 @@ export class JumperScene extends Phaser.Scene {
         gap = Math.max(gap, minFirstRowGap);
         this.firstRowPending = false;
       }
-      y -= gap;
-
       // How far sideways can a jump of this specific height still travel?
       // hangFraction is the fraction of the jump's total airtime (as a 0-1
       // ratio of "time to full apex and back") during which the player is at
@@ -359,13 +387,15 @@ export class JumperScene extends Phaser.Scene {
       // two times y(t) = gap. A taller gap leaves a smaller window, so a
       // fixed x-step cap would either be unreachable for tall gaps or overly
       // conservative for short ones.
-      const hangFraction = Math.sqrt(Math.max(0, 1 - (4 * gap) / Math.abs(BASE_JUMP_VELOCITY)));
-      const worstCaseGroundSpeed = BASE_MOVE_SPEED * SLOWDOWN_SPEED_MULTIPLIER;
-      // 0.75 safety margin below the theoretical limit, plus a flat overlap
-      // allowance (you only need the platforms' edges to overlap, not their
-      // centers to coincide).
-      const reachableXBudget = Math.round(worstCaseGroundSpeed * hangFraction * 0.75 + PLATFORM_WIDTH);
-      const xGapMax = Math.max(PLATFORM_X_GAP_MIN, reachableXBudget);
+      const computeXGapMax = (forGap: number): number => {
+        const hangFraction = Math.sqrt(Math.max(0, 1 - (4 * forGap) / Math.abs(BASE_JUMP_VELOCITY)));
+        const worstCaseGroundSpeed = BASE_MOVE_SPEED * SLOWDOWN_SPEED_MULTIPLIER;
+        // 0.75 safety margin below the theoretical limit, plus a flat overlap
+        // allowance (you only need the platforms' edges to overlap, not their
+        // centers to coincide).
+        const reachableXBudget = Math.round(worstCaseGroundSpeed * hangFraction * 0.75 + PLATFORM_WIDTH);
+        return Math.max(PLATFORM_X_GAP_MIN, reachableXBudget);
+      };
 
       // x is a bounded step from the PREVIOUS platform (not independently
       // random) so the horizontal distance between vertically-adjacent
@@ -373,23 +403,39 @@ export class JumperScene extends Phaser.Scene {
       const minX = PLATFORM_WIDTH / 2;
       const maxX = WORLD_WIDTH - PLATFORM_WIDTH / 2;
       const direction = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
-      const dx = Phaser.Math.Between(PLATFORM_X_GAP_MIN, xGapMax) * direction;
+      let xGapMax = computeXGapMax(gap);
+      let dx = Phaser.Math.Between(PLATFORM_X_GAP_MIN, xGapMax) * direction;
+
+      // This step lands close enough in x to overlap the column the player
+      // stands in on the previous path platform — if the rolled gap is
+      // shorter than full standing+jump headroom, they'd be wedged the
+      // moment this row spawns above them. Force enough vertical clearance
+      // for this step specifically, then re-derive how far sideways that
+      // (now taller) jump can still reach, clamping the already-chosen
+      // direction/step down to fit rather than re-rolling it.
+      if (Math.abs(dx) < HEADROOM_X_THRESHOLD && gap < HEADROOM_MIN_GAP) {
+        gap = HEADROOM_MIN_GAP;
+        xGapMax = computeXGapMax(gap);
+        dx = Phaser.Math.Clamp(Math.abs(dx), PLATFORM_X_GAP_MIN, xGapMax) * direction;
+      }
+
+      y -= gap;
       let x = Phaser.Math.Clamp(this.lastGeneratedX + dx, minX, maxX);
       // The path platform's position is load-bearing for reachability (its x
       // is a bounded step, its y is the exact computed gap), so it can't be
       // freely re-rolled like a filler — instead nudge it sideways in small
       // steps until it clears the row below, still within the reachable
-      // bound. In practice this rarely triggers: adjacent rows are already
-      // PLATFORM_GAP_MIN(25) apart vertically, comfortably more than
-      // PLATFORM_HEIGHT(14), so only a previous row's *filler* (which does
-      // jitter vertically) can ever be close enough to collide with a path
-      // platform's exact row height.
+      // bound. The headroom check above already prevents the common
+      // "wedged" case (small dx + short gap); what's left for this loop is
+      // the rarer case of a previous row's *filler* (which jitters
+      // vertically) landing close enough to collide with this exact row
+      // height despite the path step being otherwise fine.
       for (let nudge = 0; this.overlapsExisting(x, y, /* nothing placed in this row yet */ []) && nudge < 8; nudge++) {
         x = Phaser.Math.Clamp(x + (nudge % 2 === 0 ? 1 : -1) * (nudge + 1) * 6, minX, maxX);
       }
       this.lastGeneratedX = x;
 
-      this.addPlatformBlock(x, y, PLATFORM_WIDTH, PLATFORM_HEIGHT, UCAB_INK_3, UCAB_BLUE);
+      this.addPlatformBlock(x, y, PLATFORM_WIDTH, PLATFORM_HEIGHT, UCAB_INK_3, UCAB_GOLD);
       const rowPlacements: PlatformPlacement[] = [{ x, y }];
 
       // Filler platforms: pure visual/optional density, not part of the
@@ -406,7 +452,7 @@ export class JumperScene extends Phaser.Scene {
           const fy = y + Phaser.Math.Between(-8, 8);
           const farEnoughInRow = rowPlacements.every((p) => Math.abs(p.x - fx) >= FILLER_MIN_SPACING);
           if (farEnoughInRow && !this.overlapsExisting(fx, fy, rowPlacements)) {
-            this.addPlatformBlock(fx, fy, PLATFORM_WIDTH, PLATFORM_HEIGHT, UCAB_INK_3, UCAB_BLUE);
+            this.addPlatformBlock(fx, fy, PLATFORM_WIDTH, PLATFORM_HEIGHT, UCAB_INK_3, UCAB_GOLD);
             rowPlacements.push({ x: fx, y: fy });
             placed = true;
             break;
@@ -434,5 +480,21 @@ export class JumperScene extends Phaser.Scene {
     bg.fillRect(0, 0, WORLD_WIDTH, CANVAS_HEIGHT);
     bg.setScrollFactor(0);
     bg.setDepth(-10);
+
+    // World backdrop, layered above the ink gradient but still behind every
+    // platform (which render at the default depth 0) — a fixed backdrop
+    // rather than one tied to world-space y, since platforms are generated
+    // endlessly upward and a single image can't tile with them.
+    const backdrop = this.add.image(WORLD_WIDTH / 2, CANVAS_HEIGHT / 2, 'worldBackdrop');
+    backdrop.setDisplaySize(WORLD_WIDTH, CANVAS_HEIGHT);
+    backdrop.setScrollFactor(0);
+    backdrop.setDepth(-5);
+    // Tinted toward the brand blue, at partial opacity, so the photo reads
+    // as part of the same blue/ink palette as the platforms instead of a
+    // flat image pasted on top — plain alpha blending (not MULTIPLY, which
+    // against this near-black ink crushes the image to near-invisible), and
+    // no vignette/mask fade like the lobby backdrop.
+    backdrop.setAlpha(0.85);
+    backdrop.setTint(0x9fd6ef);
   }
 }

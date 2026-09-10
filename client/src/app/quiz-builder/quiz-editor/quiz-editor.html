@@ -14,9 +14,12 @@
     <a routerLink="/quizzes" class="back-link">&larr; Mis cuestionarios</a>
 
     <app-pixel-panel title="Detalles del cuestionario" class="quiz-editor">
-      <app-pixel-input label="Título" [value]="titleDraft()" (valueChange)="titleDraft.set($event)" />
+      <app-pixel-input label="Título" [value]="titleDraft()" (valueChange)="titleDraft.set($event); titleSaved.set(false)" />
       @if (titleError(); as message) {
         <p class="error">{{ message }}</p>
+      }
+      @if (titleSaved()) {
+        <p class="hint">Título guardado.</p>
       }
       @if (publishError(); as message) {
         <p class="error">{{ message }}</p>
@@ -33,6 +36,37 @@
       </div>
       @if (quiz()?.status === 'draft' && questions().length === 0) {
         <p class="hint">Agrega al menos una pregunta antes de publicar.</p>
+      }
+    </app-pixel-panel>
+
+    <app-pixel-panel title="Etiquetas" class="quiz-editor">
+      @if (tags().length > 0) {
+        <div class="tag-pills">
+          @for (tag of tags(); track tag.id) {
+            <span class="tag-pill">
+              {{ tag.name }}
+              <button type="button" class="tag-remove" (click)="removeTag(tag)" aria-label="Quitar etiqueta">&times;</button>
+            </span>
+          }
+        </div>
+      } @else {
+        <p class="hint">Todavía no tiene etiquetas.</p>
+      }
+      <form class="tag-form" (submit)="$event.preventDefault(); addTagFromInput()">
+        <input
+          class="pixel-input"
+          type="text"
+          placeholder="Agregar etiqueta (Enter o coma)"
+          [value]="newTagName()"
+          (input)="newTagName.set($any($event.target).value)"
+          (keydown.,)="$event.preventDefault(); addTagFromInput()"
+        />
+        <app-pixel-button type="submit" size="compact" variant="secondary" [disabled]="tagBusy() || !newTagName().trim()">
+          Añadir
+        </app-pixel-button>
+      </form>
+      @if (tagError(); as message) {
+        <p class="error">{{ message }}</p>
       }
     </app-pixel-panel>
 

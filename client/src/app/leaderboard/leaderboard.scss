@@ -52,6 +52,12 @@
 
   .score {
     font-family: var(--font-data);
+    font-size: 0.95rem;
+    color: var(--ucab-paper-dim);
+  }
+
+  .points {
+    font-family: var(--font-data);
     font-size: 1.3rem;
     color: var(--ucab-gold);
   }

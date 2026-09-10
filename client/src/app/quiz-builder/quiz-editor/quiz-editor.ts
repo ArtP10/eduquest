@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { QuizBuilderService, type QuestionSummary, type QuizSummary } from '../quiz-builder.service';
+import { QuizBuilderService, type QuestionSummary, type QuizSummary, type Tag } from '../quiz-builder.service';
 import { PixelPanel } from '../../shared/pixel-ui/pixel-panel/pixel-panel';
 import { PixelInput } from '../../shared/pixel-ui/pixel-input/pixel-input';
 import { PixelButton } from '../../shared/pixel-ui/pixel-button/pixel-button';
@@ -35,8 +35,14 @@ export class QuizEditor {
   readonly titleDraft = signal('');
   readonly savingTitle = signal(false);
   readonly titleError = signal<string | null>(null);
+  readonly titleSaved = signal(false);
   readonly publishing = signal(false);
   readonly publishError = signal<string | null>(null);
+
+  readonly tags = signal<Tag[]>([]);
+  readonly newTagName = signal('');
+  readonly tagBusy = signal(false);
+  readonly tagError = signal<string | null>(null);
 
   readonly editTarget = signal<QuestionEditTarget | null>(null);
   readonly formQuestionText = signal('');
@@ -59,9 +65,10 @@ export class QuizEditor {
         this.quiz.set(result.quiz);
         this.questions.set(result.questions);
         this.titleDraft.set(result.quiz.title);
+        this.tags.set(result.tags);
       }
     } catch {
-      this.loadError.set('Could not load this quiz. Please try again.');
+      this.loadError.set('No se pudo cargar el cuestionario. Por favor, intenta de nuevo.');
     } finally {
       this.loading.set(false);
     }
@@ -71,12 +78,44 @@ export class QuizEditor {
     if (this.savingTitle() || !this.titleDraft().trim()) return;
     this.savingTitle.set(true);
     this.titleError.set(null);
+    this.titleSaved.set(false);
     const result = await this.quizBuilderService.updateQuiz(this.quizId, { title: this.titleDraft().trim() });
     this.savingTitle.set(false);
     if (result.ok) {
       this.quiz.set(result.data);
+      this.titleSaved.set(true);
+      setTimeout(() => this.titleSaved.set(false), 3000);
     } else {
       this.titleError.set(result.error);
+    }
+  }
+
+  /** Enter or comma adds the currently-typed tag; called from the tag input's (keydown.enter) and (keydown.,). */
+  async addTagFromInput(): Promise<void> {
+    const name = this.newTagName().trim().replace(/,$/, '');
+    if (!name || this.tagBusy()) return;
+    if (this.tags().some((t) => t.name === name.toLowerCase())) {
+      this.newTagName.set('');
+      return;
+    }
+
+    this.tagBusy.set(true);
+    this.tagError.set(null);
+    const result = await this.quizBuilderService.addTag(this.quizId, name);
+    this.tagBusy.set(false);
+
+    if (result.ok) {
+      this.tags.set([...this.tags(), result.data]);
+      this.newTagName.set('');
+    } else {
+      this.tagError.set(result.error);
+    }
+  }
+
+  async removeTag(tag: Tag): Promise<void> {
+    const result = await this.quizBuilderService.removeTag(this.quizId, tag.id);
+    if (result.ok) {
+      this.tags.set(this.tags().filter((t) => t.id !== tag.id));
     }
   }
 

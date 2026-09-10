@@ -7,6 +7,10 @@
     <p class="error">{{ message }}</p>
   }
 
+  <div class="generate-entry">
+    <app-pixel-button variant="secondary" [routerLink]="['/quizzes/generate']">Generar desde PDF</app-pixel-button>
+  </div>
+
   @if (loading()) {
     <p class="hint">Cargando…</p>
   } @else if (loadError()) {

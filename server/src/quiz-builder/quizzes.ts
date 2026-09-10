@@ -5,19 +5,28 @@ export type QuizStatus = 'draft' | 'published';
 export interface QuizRecord {
   id: string;
   title: string;
-  authorId: string;
+  // Null only for a seeded sample quiz (see is_sample) — every user-created
+  // quiz always has a real author.
+  authorId: string | null;
   status: QuizStatus;
   createdAt: Date;
   updatedAt: Date;
+  // True for the two built-in quizzes seeded by
+  // 1788600000003_add-sample-quiz-support — never true for a user-created
+  // quiz. Kept alongside the nullable author_id (rather than relying on
+  // authorId === null alone) so "this is a sample quiz" is an explicit,
+  // self-documenting check rather than an inferred one.
+  isSample: boolean;
 }
 
 interface QuizRow {
   id: string;
   title: string;
-  author_id: string;
+  author_id: string | null;
   status: QuizStatus;
   created_at: Date;
   updated_at: Date;
+  is_sample: boolean;
 }
 
 function rowToQuiz(row: QuizRow): QuizRecord {
@@ -27,7 +36,8 @@ function rowToQuiz(row: QuizRow): QuizRecord {
     authorId: row.author_id,
     status: row.status,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    isSample: row.is_sample
   };
 }
 

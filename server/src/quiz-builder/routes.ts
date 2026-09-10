@@ -5,16 +5,11 @@ import { requireQuestionOwnership, requireQuizOwnership } from './ownership.js';
 import { createQuiz, findQuizById, listQuizzesByAuthor, updateQuiz } from './quizzes.js';
 import { createQuestion, deleteQuestion, listQuestionsByQuiz, updateQuestion } from './questions.js';
 import { validateQuestionInput } from './validation.js';
-import { listAvailableQuizzes } from './gameplay.js';
+import { attachTag, detachTag } from './quiz-tags.js';
+import { findOrCreateTag, listTagsForQuiz } from '../quiz-library/tags.js';
+import { getQuizGlobalStats } from '../match-history/matches.js';
 
 export const quizBuilderRouter = Router();
-
-// Public (no auth) — feeds the room-creation quiz picker. Never fails on a
-// DB outage; see listAvailableQuizzes' mock-only fallback.
-quizBuilderRouter.get('/quizzes/available', async (_req, res) => {
-  const quizzes = await listAvailableQuizzes();
-  res.json({ quizzes });
-});
 
 quizBuilderRouter.post(
   '/quizzes',
@@ -56,7 +51,16 @@ quizBuilderRouter.get(
       return;
     }
     const questions = await listQuestionsByQuiz(quiz.id);
-    res.json({ quiz, questions });
+    const tags = await listTagsForQuiz(quiz.id);
+    res.json({ quiz, questions, tags });
+  })
+);
+
+quizBuilderRouter.get(
+  '/quizzes/:id/stats',
+  withDbErrorHandling(async (req, res) => {
+    const stats = await getQuizGlobalStats(req.params['id']!);
+    res.json({ stats });
   })
 );
 
@@ -133,6 +137,32 @@ quizBuilderRouter.delete(
   withDbErrorHandling(requireQuestionOwnership),
   withDbErrorHandling(async (req, res) => {
     await deleteQuestion(req.question!.id);
+    res.json({ ok: true });
+  })
+);
+
+quizBuilderRouter.post(
+  '/quizzes/:id/tags',
+  requireAuth,
+  withDbErrorHandling(requireQuizOwnership),
+  withDbErrorHandling(async (req, res) => {
+    const { name } = req.body ?? {};
+    if (typeof name !== 'string' || !name.trim()) {
+      res.status(400).json({ error: 'Tag name is required.' });
+      return;
+    }
+    const tag = await findOrCreateTag(name);
+    await attachTag(req.quiz!.id, tag.id);
+    res.status(201).json({ tag });
+  })
+);
+
+quizBuilderRouter.delete(
+  '/quizzes/:id/tags/:tagId',
+  requireAuth,
+  withDbErrorHandling(requireQuizOwnership),
+  withDbErrorHandling(async (req, res) => {
+    await detachTag(req.quiz!.id, req.params['tagId']!);
     res.json({ ok: true });
   })
 );

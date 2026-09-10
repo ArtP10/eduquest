@@ -1,0 +1,94 @@
+:host {
+  position: relative;
+  z-index: 1;
+}
+
+.my-matches {
+  max-width: 560px;
+  width: 100%;
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--ucab-paper-dim);
+  font-size: 0.9rem;
+}
+
+.match-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--ucab-ink-3);
+  }
+}
+
+.match-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  text-decoration: none;
+  color: var(--ucab-paper);
+
+  &:hover,
+  &:focus-visible {
+    .match-title {
+      text-decoration: underline;
+      color: var(--ucab-blue);
+    }
+  }
+}
+
+.match-title {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.match-date {
+  font-size: 0.75rem;
+  color: var(--ucab-paper-dim);
+}
+
+.match-figures {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+}
+
+.host-badge {
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  color: var(--ucab-gold);
+}
+
+.placement {
+  color: var(--ucab-blue);
+  font-weight: 700;
+}
+
+.score {
+  color: var(--ucab-paper-dim);
+}

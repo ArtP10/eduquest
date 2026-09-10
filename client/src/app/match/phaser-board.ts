@@ -11,7 +11,7 @@ import Phaser from 'phaser';
 import { SocketService } from '../core/socket.service';
 import { JumperScene, WORLD_WIDTH, CANVAS_HEIGHT } from './jumper-scene';
 
-const PROGRESS_REPORT_INTERVAL_MS = 500;
+const PROGRESS_REPORT_INTERVAL_MS = 150;
 
 @Component({
   selector: 'app-phaser-board',

@@ -1,0 +1,170 @@
+:host {
+  position: relative;
+  z-index: 1;
+}
+
+.match-detail {
+  max-width: 640px;
+  width: 100%;
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--ucab-paper-dim);
+  font-size: 0.9rem;
+}
+
+.played-at {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ucab-paper-dim);
+}
+
+.global-average {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ucab-gold);
+  font-weight: 700;
+}
+
+.section-title {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  color: var(--ucab-paper);
+}
+
+.leaderboard {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.75rem;
+  background: var(--ucab-ink-3);
+  font-size: 0.8rem;
+}
+
+.rank {
+  color: var(--ucab-blue);
+  font-weight: 700;
+}
+
+.nickname {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ucab-paper);
+}
+
+.score {
+  color: var(--ucab-paper-dim);
+}
+
+.drill-down {
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+
+.drill-down-score {
+  margin: 0 0 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ucab-gold);
+}
+
+.question-review {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.question-review-item {
+  padding: 0.5rem;
+  background: var(--ucab-ink-2);
+}
+
+.question-review-text {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ucab-paper);
+}
+
+.choice-review-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.choice-review {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--ucab-paper-dim);
+  background: var(--ucab-ink-3);
+}
+
+.choice-review--correct {
+  color: var(--ucab-green);
+  outline: 2px solid var(--ucab-green);
+  outline-offset: -2px;
+}
+
+.choice-review--wrong-pick {
+  color: var(--danger);
+  outline: 2px solid var(--danger);
+  outline-offset: -2px;
+}
+
+.choice-tag {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.no-answer {
+  margin: 0.4rem 0 0;
+  font-size: 0.7rem;
+  font-style: italic;
+  color: var(--ucab-paper-dim);
+}
+
+.back-link {
+  align-self: flex-start;
+  color: var(--ucab-paper-dim);
+  text-decoration: none;
+  font-size: 0.8rem;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--ucab-blue);
+    text-decoration: underline;
+  }
+}

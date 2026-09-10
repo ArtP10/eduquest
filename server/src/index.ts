@@ -6,10 +6,20 @@ import { Server } from 'socket.io';
 import type { ClientToServerEvents, ServerToClientEvents } from '@quizjumper/shared/events';
 
 import { createRoom, getRoom, deleteRoom, addPlayer, removePlayerBySocketId } from './rooms.js';
-import { startMatch, submitAnswer, setClimbProgress, broadcastLobby } from './match.js';
+import { startMatch, submitAnswer, reportClimbProgress, broadcastLobby } from './match.js';
 import { authRouter } from './auth/routes.js';
 import { quizBuilderRouter } from './quiz-builder/routes.js';
+import { quizGenerationRouter } from './quiz-generation/routes.js';
+import { quizLibraryRouter } from './quiz-library/routes.js';
 import { resolveQuizForRoom } from './quiz-builder/gameplay.js';
+import { matchHistoryRouter } from './match-history/routes.js';
+import { verifyAccessToken } from './auth/jwt.js';
+
+/** Resolves an optional socket-payload authToken to a userId, or undefined for a missing/invalid token — never throws, never rejects the caller (see design.md decision 1). */
+function resolveSocketUserId(authToken?: string): string | undefined {
+  if (!authToken) return undefined;
+  return verifyAccessToken(authToken)?.userId;
+}
 
 interface SocketData {
   roomCode?: string;
@@ -25,9 +35,22 @@ app.use(express.json());
 // New, additive-only auth surface — does not touch any room/match/socket
 // route or state below.
 app.use('/auth', authRouter);
+// Public, unauthenticated browsing/search/filter of published quizzes plus
+// the tag catalog — kept out of quizBuilderRouter since it carries no
+// ownership/auth middleware at all. Mounted before quizBuilderRouter so
+// GET /quizzes/published matches this router's specific route rather than
+// quizBuilderRouter's GET /quizzes/:id (which would otherwise treat
+// "published" as an id, since Express matches routers in mount order).
+app.use(quizLibraryRouter);
 // Quiz-builder CRUD (routes already carry their own /quizzes, /questions
 // prefixes) — likewise additive, does not touch any room/match/socket route.
 app.use(quizBuilderRouter);
+// AI quiz generation (POST /quizzes/generate) — writes into the same
+// quizzes/questions tables as quizBuilderRouter but via its own module.
+app.use(quizGenerationRouter);
+// Match history (persisted at game-end, read via requireAuth routes) —
+// additive, does not touch any room/match/socket route.
+app.use(matchHistoryRouter);
 
 const httpServer = createServer(app);
 const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>(
@@ -36,14 +59,15 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string,
 );
 
 io.on('connection', (socket) => {
-  socket.on('room:create', async ({ displayName, quizId }, ack) => {
+  socket.on('room:create', async ({ displayName, quizId, authToken }, ack) => {
     if (!displayName || typeof displayName !== 'string') {
       ack({ ok: false, error: 'Se requiere un nombre para mostrar.' });
       return;
     }
     const quiz = await resolveQuizForRoom(quizId);
     const room = createRoom({ baseUrl: CLIENT_ORIGIN, quiz });
-    const { playerId, isHost } = addPlayer(room, { displayName, socketId: socket.id });
+    const userId = resolveSocketUserId(authToken);
+    const { playerId, isHost } = addPlayer(room, { displayName, socketId: socket.id, userId });
 
     socket.join(room.code);
     socket.data.roomCode = room.code;
@@ -59,7 +83,7 @@ io.on('connection', (socket) => {
     broadcastLobby(io, room);
   });
 
-  socket.on('room:join', ({ roomCode, displayName }, ack) => {
+  socket.on('room:join', ({ roomCode, displayName, authToken }, ack) => {
     if (!roomCode || !displayName) {
       ack({ ok: false, error: 'Se requieren el código de sala y un nombre para mostrar.' });
       return;
@@ -74,7 +98,8 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const { playerId, isHost } = addPlayer(room, { displayName, socketId: socket.id });
+    const userId = resolveSocketUserId(authToken);
+    const { playerId, isHost } = addPlayer(room, { displayName, socketId: socket.id, userId });
     socket.join(room.code);
     socket.data.roomCode = room.code;
     socket.data.playerId = playerId;
@@ -122,7 +147,7 @@ io.on('connection', (socket) => {
     const { roomCode, playerId } = socket.data;
     const room = roomCode ? getRoom(roomCode) : null;
     if (!room || !playerId || typeof progress !== 'number') return;
-    setClimbProgress(room, playerId, progress);
+    reportClimbProgress(io, room, playerId, progress);
   });
 
   socket.on('disconnect', () => {

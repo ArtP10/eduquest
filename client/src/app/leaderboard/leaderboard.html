@@ -11,7 +11,8 @@
           }
         </span>
         <span class="name">{{ entry.displayName }}</span>
-        <span class="score">{{ entry.total }}</span>
+        <span class="score" title="Respuestas correctas">{{ entry.score }}/{{ entry.answered }}</span>
+        <span class="points" title="Altura">{{ entry.points | number: '1.0-0' }}</span>
       </li>
     }
   </ol>

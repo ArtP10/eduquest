@@ -23,9 +23,9 @@ export interface QuestionSummary {
   orderIndex: number;
 }
 
-export interface AvailableQuiz {
+export interface Tag {
   id: string;
-  title: string;
+  name: string;
 }
 
 export type QuizBuilderResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -49,9 +49,11 @@ export class QuizBuilderService {
     return res.quizzes;
   }
 
-  async getQuiz(id: string): Promise<{ quiz: QuizSummary; questions: QuestionSummary[] } | null> {
+  async getQuiz(id: string): Promise<{ quiz: QuizSummary; questions: QuestionSummary[]; tags: Tag[] } | null> {
     try {
-      return await firstValueFrom(this.http.get<{ quiz: QuizSummary; questions: QuestionSummary[] }>(`${environment.apiUrl}/quizzes/${id}`));
+      return await firstValueFrom(
+        this.http.get<{ quiz: QuizSummary; questions: QuestionSummary[]; tags: Tag[] }>(`${environment.apiUrl}/quizzes/${id}`)
+      );
     } catch (err) {
       if (err instanceof HttpErrorResponse && err.status === 404) return null;
       throw err;
@@ -82,10 +84,26 @@ export class QuizBuilderService {
     return this.mutate(() => firstValueFrom(this.http.delete(`${environment.apiUrl}/questions/${id}`)).then(() => undefined));
   }
 
-  /** Feeds the room-creation quiz picker (mock + published) — degrades gracefully server-side if Postgres is down, see server design.md decision 7. */
-  async listAvailable(): Promise<AvailableQuiz[]> {
-    const res = await firstValueFrom(this.http.get<{ quizzes: AvailableQuiz[] }>(`${environment.apiUrl}/quizzes/available`));
-    return res.quizzes;
+  /** Uploads a PDF for AI generation; returns the resulting draft quiz on success, ready to open in the same quiz editor as a manually-created quiz. */
+  async generateFromPdf(file: File, questionCount: number): Promise<QuizBuilderResult<QuizSummary>> {
+    const form = new FormData();
+    form.append('pdf', file);
+    form.append('questionCount', String(questionCount));
+    return this.mutate(() =>
+      firstValueFrom(this.http.post<{ quiz: QuizSummary }>(`${environment.apiUrl}/quizzes/generate`, form)).then((r) => r.quiz)
+    );
+  }
+
+  async addTag(quizId: string, name: string): Promise<QuizBuilderResult<Tag>> {
+    return this.mutate(() =>
+      firstValueFrom(this.http.post<{ tag: Tag }>(`${environment.apiUrl}/quizzes/${quizId}/tags`, { name })).then((r) => r.tag)
+    );
+  }
+
+  async removeTag(quizId: string, tagId: string): Promise<QuizBuilderResult<void>> {
+    return this.mutate(() =>
+      firstValueFrom(this.http.delete(`${environment.apiUrl}/quizzes/${quizId}/tags/${tagId}`)).then(() => undefined)
+    );
   }
 
   private async mutate<T>(fn: () => Promise<T>): Promise<QuizBuilderResult<T>> {
@@ -101,7 +119,7 @@ function extractErrorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
     const body = err.error as { error?: string } | undefined;
     if (body?.error) return body.error;
-    if (err.status === 0) return 'Could not reach the server. Check your connection and try again.';
+    if (err.status === 0) return 'No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.';
   }
-  return 'Something went wrong. Please try again.';
+  return 'Algo salió mal. Por favor, intenta de nuevo.';
 }

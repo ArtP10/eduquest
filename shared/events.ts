@@ -19,14 +19,18 @@ export interface LobbyPlayer {
 export interface LeaderboardEntry {
   playerId: string;
   displayName: string;
-  total: number;
+  /** Climb height — the value that decides ranking. */
+  points: number;
+  /** Number of correctly-answered questions. */
+  score: number;
+  /** Number of questions answered (scored) so far. */
+  answered: number;
   rank: number;
 }
 
 export interface AnswerResult {
   choiceIndex: number | null;
   isCorrect: boolean;
-  pointsAwarded: number;
   modifier: Modifier;
 }
 
@@ -40,8 +44,10 @@ export interface PlacementEntry {
 
 export interface RoomCreateRequest {
   displayName: string;
-  /** Optional: a mock or published quiz id from GET /quizzes/available. Omitted or unresolvable falls back to a random mock quiz. */
+  /** Optional: a mock quiz id, or a published quiz id chosen from the Quiz Library (GET /quizzes/published). Omitted or unresolvable falls back to a random mock quiz. */
   quizId?: string;
+  /** Optional: the caller's JWT access token, so the resulting match/player can be attributed to their account. Missing or invalid is never rejected — treated as a guest. */
+  authToken?: string;
 }
 
 export interface RoomCreateResponse {
@@ -56,6 +62,8 @@ export interface RoomCreateResponse {
 export interface RoomJoinRequest {
   roomCode: string;
   displayName: string;
+  /** Optional: the caller's JWT access token, so the resulting match/player can be attributed to their account. Missing or invalid is never rejected — treated as a guest. */
+  authToken?: string;
 }
 
 export interface RoomJoinResponse {
@@ -96,6 +104,7 @@ export interface MatchClimbStartEvent {
   durationMs: number;
   serverTime: number;
   phaseEndsAt: number;
+  leaderboard: LeaderboardEntry[];
 }
 
 export interface MatchFreezeStartEvent {
@@ -140,4 +149,5 @@ export interface ServerToClientEvents {
   'match:freeze-start': (event: MatchFreezeStartEvent) => void;
   'match:results': (event: MatchResultsEvent) => void;
   'match:ended': (event: MatchEndedEvent) => void;
+  'leaderboard:update': (event: LeaderboardUpdateEvent) => void;
 }

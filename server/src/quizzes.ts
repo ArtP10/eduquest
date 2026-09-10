@@ -1,12 +1,21 @@
 import type { Quiz } from '@quizjumper/shared/quiz';
 
 // Quiz data shape: see shared/quiz.ts (Quiz, QuizQuestion).
-// Hardcoded per multiplayer-jumper-core scope — no authoring UI, no persistence.
+// Hardcoded here (not read from Postgres) so room creation keeps working —
+// including its fallback to a random quiz when no id was selected — even
+// when Postgres is unreachable (see quiz-content spec's DB-outage scenario).
 // Content is in Spanish: that's the game's language.
-
+//
+// These two quizzes are ALSO seeded as real `quizzes`/`questions` rows (see
+// migration 1788600000003_add-sample-quiz-support, is_sample = true) with
+// the SAME ids as below — purely so match history can FK a played match to
+// a real quiz row. The ids below are the source of truth: if you change one
+// here, update the seed migration's INSERT to match, or match-history
+// persistence for that quiz will start failing (fails soft — see
+// design.md decision 4 — but silently, so don't rely on that).
 const QUIZZES: Quiz[] = [
   {
-    id: 'cultura-general-1',
+    id: '4061f2ae-33bf-4583-ad4e-f66949f6fe6e',
     title: 'Cultura General',
     questions: [
       {
@@ -42,7 +51,7 @@ const QUIZZES: Quiz[] = [
     ]
   },
   {
-    id: 'ciencias-basicas-1',
+    id: 'c66bb43e-d219-4ab1-9e53-903d3dfaf0a4',
     title: 'Ciencias Básicas',
     questions: [
       {

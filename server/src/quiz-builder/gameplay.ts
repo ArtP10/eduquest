@@ -1,9 +1,10 @@
 import type { Quiz, QuizQuestion } from '@quizjumper/shared/quiz';
-import { getQuizById, loadQuizzes, pickRandomQuiz } from '../quizzes.js';
-import { listPublishedQuizzes, findQuizById } from './quizzes.js';
+import { getQuizById, pickRandomQuiz } from '../quizzes.js';
+import { findQuizById } from './quizzes.js';
 import { listQuestionsByQuiz } from './questions.js';
 import type { QuestionRecord } from './questions.js';
 import type { QuizRecord } from './quizzes.js';
+import { getPool } from '../db.js';
 
 // Timer/choice-count are fixed system-wide constants this phase (see
 // proposal's explicit non-goal: no per-question configuration) — the
@@ -28,28 +29,14 @@ function toEngineQuiz(quiz: QuizRecord, questions: QuestionRecord[]): Quiz {
 }
 
 /**
- * Merges the hardcoded mock quizzes with published builder quizzes. Falls
- * back to mock-only if Postgres is unreachable rather than throwing — room
- * creation must never depend on the database (see design.md decision 7).
- */
-export async function listAvailableQuizzes(): Promise<Quiz[]> {
-  const mock = loadQuizzes();
-  try {
-    const published = await listPublishedQuizzes();
-    const converted = await Promise.all(
-      published.map(async (quiz) => toEngineQuiz(quiz, await listQuestionsByQuiz(quiz.id)))
-    );
-    return [...mock, ...converted];
-  } catch {
-    return mock;
-  }
-}
-
-/**
  * Resolves a room's quiz from an optional client-selected id: a mock quiz
- * id, a published builder quiz id, or — if omitted, unresolvable, or the DB
- * is unreachable — a random mock quiz (today's behavior). Quiz selection
- * can never block room creation.
+ * id, a published quiz id sourced from the Quiz Library, or — if omitted,
+ * unresolvable, or the DB is unreachable — a random mock quiz (today's
+ * behavior). Quiz selection can never block room creation. When a published
+ * quiz is resolved, its play_count is incremented by 1 for this room; a
+ * failed increment falls through to the same catch as any other DB error
+ * without blocking the resolved quiz from being returned (see design.md
+ * decision 5).
  */
 export async function resolveQuizForRoom(quizId?: string): Promise<Quiz> {
   if (!quizId) return pickRandomQuiz();
@@ -61,7 +48,15 @@ export async function resolveQuizForRoom(quizId?: string): Promise<Quiz> {
     const quiz = await findQuizById(quizId);
     if (quiz && quiz.status === 'published') {
       const questions = await listQuestionsByQuiz(quiz.id);
-      return toEngineQuiz(quiz, questions);
+      const engineQuiz = toEngineQuiz(quiz, questions);
+      try {
+        await getPool().query('UPDATE quizzes SET play_count = play_count + 1 WHERE id = $1', [quiz.id]);
+      } catch {
+        // Play count is a popularity signal, not a correctness requirement —
+        // a failed increment must never prevent the resolved quiz from being
+        // returned (see design.md risk/trade-off).
+      }
+      return engineQuiz;
     }
   } catch {
     // DB unreachable or lookup failed — fall through to the random fallback.

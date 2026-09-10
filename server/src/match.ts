@@ -6,7 +6,8 @@ import type {
   AnswerResult
 } from '@quizjumper/shared/events';
 import { connectedPlayerIds, getLobbyPlayerList, type Room } from './rooms.js';
-import { scoreAnswer, placementBonusForRank, rankPlayersByClimbProgress } from './scoring.js';
+import { rankPlayersByClimbProgress } from './scoring.js';
+import { persistMatch } from './match-history/matches.js';
 
 type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -25,10 +26,12 @@ function buildLeaderboard(room: Room): LeaderboardEntry[] {
     .map(([playerId, score]) => ({
       playerId,
       displayName: room.players.get(playerId)?.displayName ?? 'Unknown',
-      total: score.total,
+      points: room.players.get(playerId)?.climbProgress ?? 0,
+      score: score.correctAnswers,
+      answered: score.questionsAnswered,
       rank: 0
     }))
-    .sort((a, b) => b.total - a.total)
+    .sort((a, b) => b.points - a.points)
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 }
 
@@ -60,7 +63,8 @@ function startClimbPhase(io: IoServer, room: Room): void {
     totalQuestions: room.quiz.questions.length,
     durationMs: CLIMB_DURATION_MS,
     serverTime,
-    phaseEndsAt: room.phaseEndsAt
+    phaseEndsAt: room.phaseEndsAt,
+    leaderboard: buildLeaderboard(room)
   });
 
   room.phaseTimer = setTimeout(() => startFreezePhase(io, room), CLIMB_DURATION_MS);
@@ -114,22 +118,15 @@ function startResultsPhase(io: IoServer, room: Room): void {
   const serverTime = Date.now();
   room.phaseEndsAt = serverTime + RESULTS_DISPLAY_MS;
   const question = room.quiz.questions[room.currentQuestionIndex];
-  const totalMs = question.seconds * 1000;
   const answerResults: Record<string, AnswerResult> = {};
 
   for (const playerId of room.players.keys()) {
     const submitted = room.answers.get(playerId);
     const isCorrect = submitted ? submitted.choiceIndex === question.correctIndex : false;
-    const { correctness, speed } = scoreAnswer({
-      isCorrect,
-      remainingMs: submitted ? submitted.remainingMs : 0,
-      totalMs
-    });
 
     const score = room.scores.get(playerId)!;
-    score.correctness += correctness;
-    score.speed += speed;
-    score.total = score.correctness + score.speed + score.placement;
+    score.questionsAnswered += 1;
+    if (isCorrect) score.correctAnswers += 1;
 
     const modifier = isCorrect ? 'boost' : 'slowdown';
     room.modifiers.set(playerId, modifier);
@@ -137,9 +134,21 @@ function startResultsPhase(io: IoServer, room: Room): void {
     answerResults[playerId] = {
       choiceIndex: submitted ? submitted.choiceIndex : null,
       isCorrect,
-      pointsAwarded: correctness + speed,
       modifier
     };
+
+    // Captured here (not in endMatch) since `room.answers` is wiped at the
+    // start of every climb phase — see design.md decision 3.
+    room.answerLog.push({
+      playerId,
+      questionIndex: room.currentQuestionIndex,
+      questionText: question.text,
+      choices: question.choices,
+      correctChoiceIndex: question.correctIndex,
+      selectedChoiceIndex: submitted ? (submitted.choiceIndex as 0 | 1 | 2 | 3) : null,
+      isCorrect,
+      answerTimeMs: submitted ? question.seconds * 1000 - submitted.remainingMs : null
+    });
   }
 
   io.to(room.code).emit('match:results', {
@@ -166,27 +175,33 @@ function endMatch(io: IoServer, room: Room): void {
     }))
   );
 
-  ranked.forEach((entry, index) => {
-    const score = room.scores.get(entry.playerId)!;
-    const bonus = placementBonusForRank(index);
-    score.placement += bonus;
-    score.total = score.correctness + score.speed + score.placement;
-  });
+  const placements = ranked.map((entry, index) => ({
+    playerId: entry.playerId,
+    rank: index + 1,
+    climbProgress: entry.climbProgress
+  }));
 
   io.to(room.code).emit('match:ended', {
     leaderboard: buildLeaderboard(room),
-    placements: ranked.map((entry, index) => ({
-      playerId: entry.playerId,
-      rank: index + 1,
-      climbProgress: entry.climbProgress
-    }))
+    placements
+  });
+
+  // Fire-and-forget: persistence failure must never affect the match that
+  // already ended for connected clients — see design.md decision 4.
+  persistMatch(room, placements).catch((err) => {
+    console.error(`Failed to persist match history for room ${room.code}:`, err);
   });
 }
 
 export function setClimbProgress(room: Room, playerId: string, progress: number): void {
   const player = room.players.get(playerId);
   if (!player) return;
-  if (progress > player.climbProgress) player.climbProgress = progress;
+  player.climbProgress = progress;
+}
+
+export function reportClimbProgress(io: IoServer, room: Room, playerId: string, progress: number): void {
+  setClimbProgress(room, playerId, progress);
+  io.to(room.code).emit('leaderboard:update', { leaderboard: buildLeaderboard(room) });
 }
 
 export function broadcastLobby(io: IoServer, room: Room): void {

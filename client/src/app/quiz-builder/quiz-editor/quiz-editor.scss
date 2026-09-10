@@ -99,6 +99,48 @@
   }
 }
 
+.tag-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--ucab-ink-3);
+  color: var(--ucab-blue);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  color: var(--ucab-paper-dim);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0;
+
+  &:hover {
+    color: var(--danger);
+  }
+}
+
+.tag-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+
+  .pixel-input {
+    flex: 1;
+  }
+}
+
 .question-form {
   display: flex;
   flex-direction: column;

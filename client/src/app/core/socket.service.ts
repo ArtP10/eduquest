@@ -1,6 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '../../environments/environment';
+import { AuthService } from '../auth/auth.service';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -18,6 +19,8 @@ import type {
 
 @Injectable({ providedIn: 'root' })
 export class SocketService {
+  private readonly authService = inject(AuthService);
+
   private readonly socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(environment.apiUrl, {
     autoConnect: true
   });
@@ -57,6 +60,11 @@ export class SocketService {
       this.totalQuestions.set(event.totalQuestions);
       this.phaseEndsAt.set(event.phaseEndsAt);
       this.currentQuestion.set(null);
+      this.leaderboard.set(event.leaderboard);
+    });
+
+    this.socket.on('leaderboard:update', ({ leaderboard }) => {
+      this.leaderboard.set(leaderboard);
     });
 
     this.socket.on('match:freeze-start', (event) => {
@@ -87,7 +95,7 @@ export class SocketService {
 
   createRoom(displayName: string, quizId?: string): Promise<RoomCreateResponse> {
     return new Promise((resolve) => {
-      this.socket.emit('room:create', { displayName, quizId }, (res) => {
+      this.socket.emit('room:create', { displayName, quizId, authToken: this.authService.getToken() ?? undefined }, (res) => {
         this.applyJoinResult(res);
         resolve(res);
       });
@@ -96,7 +104,7 @@ export class SocketService {
 
   joinRoom(roomCode: string, displayName: string): Promise<RoomJoinResponse> {
     return new Promise((resolve) => {
-      this.socket.emit('room:join', { roomCode, displayName }, (res) => {
+      this.socket.emit('room:join', { roomCode, displayName, authToken: this.authService.getToken() ?? undefined }, (res) => {
         this.applyJoinResult(res);
         resolve(res);
       });

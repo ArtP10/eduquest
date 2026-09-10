@@ -1,0 +1,64 @@
+<app-pixel-panel title="Biblioteca de cuestionarios" class="quiz-library">
+  <div class="controls">
+    <input
+      class="pixel-input search-input"
+      type="search"
+      placeholder="Buscar por título…"
+      [ngModel]="searchTerm()"
+      (ngModelChange)="onSearchInput($event)"
+    />
+
+    <div class="sort-row">
+      <span class="sort-label">Ordenar por</span>
+      <app-pixel-button size="compact" [variant]="sort() === 'newest' ? 'primary' : 'secondary'" (click)="setSort('newest')">
+        Más recientes
+      </app-pixel-button>
+      <app-pixel-button size="compact" [variant]="sort() === 'popular' ? 'primary' : 'secondary'" (click)="setSort('popular')">
+        Popular
+      </app-pixel-button>
+    </div>
+
+    @if (allTags().length > 0) {
+      <div class="tag-chips">
+        @for (tag of allTags(); track tag.id) {
+          <button
+            type="button"
+            class="tag-chip"
+            [class.tag-chip--selected]="isTagSelected(tag.name)"
+            (click)="toggleTag(tag.name)"
+          >
+            {{ tag.name }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  @if (loading()) {
+    <p class="hint">Cargando…</p>
+  } @else if (loadError()) {
+    <p class="error">{{ loadError() }}</p>
+  } @else if (quizzes().length === 0) {
+    <p class="hint">Sin resultados. Intenta con otra búsqueda o filtro.</p>
+  } @else {
+    <div class="card-grid">
+      @for (quiz of quizzes(); track quiz.id) {
+        <app-pixel-card
+          [title]="quiz.title"
+          [author]="quiz.authorUsername"
+          [questionCount]="quiz.questionCount"
+          [playCount]="quiz.playCount"
+          [averageGrade]="quiz.averageGrade"
+          [tags]="quiz.tags"
+          (select)="selectQuiz(quiz)"
+        />
+      }
+    </div>
+
+    <div class="pagination">
+      <app-pixel-button variant="secondary" size="compact" [disabled]="!hasPrevPage" (click)="prevPage()">&larr; Anterior</app-pixel-button>
+      <span class="page-indicator">Página {{ page() }}</span>
+      <app-pixel-button variant="secondary" size="compact" [disabled]="!hasNextPage" (click)="nextPage()">Siguiente &rarr;</app-pixel-button>
+    </div>
+  }
+</app-pixel-panel>
