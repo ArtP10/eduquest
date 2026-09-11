@@ -39,6 +39,10 @@ export class SocketService {
   readonly lobbyPlayers = signal<LobbyPlayer[]>([]);
 
   readonly matchPhase = signal<MatchPhase>('lobby');
+  // True while `climbing` is the extra post-last-question climb, i.e. this
+  // climb phase's timer running out ends the match rather than leading into
+  // another question.
+  readonly isFinalClimb = signal(false);
   readonly questionIndex = signal(0);
   readonly totalQuestions = signal(0);
   readonly currentQuestion = signal<QuestionPayload | null>(null);
@@ -83,6 +87,7 @@ export class SocketService {
 
     this.socket.on('match:climb-start', (event) => {
       this.matchPhase.set('climbing');
+      this.isFinalClimb.set(event.isFinal);
       this.questionIndex.set(event.questionIndex);
       this.totalQuestions.set(event.totalQuestions);
       this.phaseEndsAt.set(event.phaseEndsAt);
@@ -195,6 +200,7 @@ export class SocketService {
     this.isHost.set(false);
     this.lobbyPlayers.set([]);
     this.matchPhase.set('lobby');
+    this.isFinalClimb.set(false);
     this.questionIndex.set(0);
     this.totalQuestions.set(0);
     this.currentQuestion.set(null);

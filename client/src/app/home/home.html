@@ -1,5 +1,7 @@
 @if (!socketService.roomCode() || socketService.matchPhase() === 'lobby') {
   <app-lobby />
+} @else if (socketService.matchPhase() === 'ended' && !victoryRevealed()) {
+  <app-victory-sequence (revealed)="victoryRevealed.set(true)" />
 } @else if (socketService.matchPhase() === 'ended') {
   <app-pixel-panel [title]="socketService.endedQuizTitle() ?? 'Resultados finales'" class="ended">
     <div class="averages">

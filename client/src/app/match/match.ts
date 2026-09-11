@@ -26,13 +26,11 @@ export class Match implements OnInit, OnDestroy {
   protected readonly nextActionLabel = computed(() => {
     switch (this.socketService.matchPhase()) {
       case 'climbing':
-        return 'Pregunta en';
+        return this.socketService.isFinalClimb() ? 'Resultados finales en' : 'Pregunta en';
       case 'frozen':
         return 'Resultados en';
-      case 'results': {
-        const isLastQuestion = this.socketService.questionIndex() + 1 >= this.socketService.totalQuestions();
-        return isLastQuestion ? 'Resultados finales en' : 'Siguiente subida en';
-      }
+      case 'results':
+        return 'Siguiente subida en';
       default:
         return '';
     }

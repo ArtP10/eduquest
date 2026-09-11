@@ -9,6 +9,7 @@ import { Leaderboard } from '../leaderboard/leaderboard';
 import { PixelPanel } from '../shared/pixel-ui/pixel-panel/pixel-panel';
 import { PixelButton } from '../shared/pixel-ui/pixel-button/pixel-button';
 import { PixelQuestionStats, type QuestionStatRow } from '../shared/pixel-ui/pixel-question-stats/pixel-question-stats';
+import { VictorySequence } from './victory-sequence/victory-sequence';
 
 interface EndedLeaderboardRow {
   playerId: string;
@@ -28,7 +29,7 @@ interface EndedLeaderboardRow {
  */
 @Component({
   selector: 'app-home',
-  imports: [Lobby, Match, Leaderboard, DecimalPipe, PixelPanel, PixelButton, PixelQuestionStats],
+  imports: [Lobby, Match, Leaderboard, DecimalPipe, PixelPanel, PixelButton, PixelQuestionStats, VictorySequence],
   templateUrl: './home.html',
   styleUrl: './home.scss'
 })
@@ -41,6 +42,9 @@ export class Home {
   protected readonly answersByMatchPlayerId = signal<Record<string, PlayerAnswerBreakdown[]>>({});
   protected readonly drillDownLoading = signal<string | null>(null);
   protected readonly drillDownError = signal<string | null>(null);
+  // Gates the stats panel behind the victory interstitial — see
+  // openspec/changes/add-match-victory-sequence.
+  protected readonly victoryRevealed = signal(false);
 
   constructor() {
     // A fresh match (or leaving the room) gets a fresh matchId — drop any
@@ -51,6 +55,7 @@ export class Home {
       this.answersByMatchPlayerId.set({});
       this.drillDownLoading.set(null);
       this.drillDownError.set(null);
+      this.victoryRevealed.set(false);
     });
   }
 

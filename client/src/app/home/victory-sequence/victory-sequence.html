@@ -1,0 +1,28 @@
+<div class="victory-overlay">
+  @if (phase() === 'stop') {
+    <div class="stop-banner">
+      <span class="stop-banner-text">¡Partida terminada!</span>
+    </div>
+  } @else {
+    <div class="podium">
+      @for (row of podium(); track row.rank) {
+        @if (visibleRanks().has(row.rank)) {
+          <div class="podium-row" [class.first]="row.rank === 1">
+            <span class="podium-rank">
+              @if (row.rank === 1) {
+                <app-pixel-icon name="trophy" [size]="28" />
+              } @else {
+                #{{ row.rank }}
+              }
+            </span>
+            <span class="podium-name">{{ row.displayName }}</span>
+          </div>
+        }
+      }
+    </div>
+
+    @if (phase() === 'done') {
+      <app-pixel-button (click)="onViewDetails()">Ver detalles de la partida</app-pixel-button>
+    }
+  }
+</div>

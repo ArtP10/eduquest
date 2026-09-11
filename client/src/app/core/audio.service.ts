@@ -1,13 +1,22 @@
 import { Injectable } from '@angular/core';
 
-export type SoundKey = 'lobby-song' | 'game-song' | 'jump-sound' | 'success-sound' | 'error-sound';
+export type SoundKey =
+  | 'lobby-song'
+  | 'game-song'
+  | 'jump-sound'
+  | 'success-sound'
+  | 'error-sound'
+  | 'air-horn-sound'
+  | 'drum-roll-sound';
 
 const SOUND_FILES: Record<SoundKey, string> = {
   'lobby-song': 'sound/lobby-song.mp3',
   'game-song': 'sound/game-song.mp3',
   'jump-sound': 'sound/jump-sound.mp3',
   'success-sound': 'sound/success-sound.mp3',
-  'error-sound': 'sound/error-sound.mp3'
+  'error-sound': 'sound/error-sound.mp3',
+  'air-horn-sound': 'sound/air-horn-sound.mp3',
+  'drum-roll-sound': 'sound/drum-roll-sound.mp3'
 };
 
 const MUSIC_VOLUME = 0.35;

@@ -121,6 +121,11 @@ export interface MatchClimbStartEvent {
   serverTime: number;
   phaseEndsAt: number;
   leaderboard: LeaderboardEntry[];
+  // True for the extra climb after the last question's results, where no
+  // next question is coming and the match ends when this phase's timer
+  // expires — lets clients label this countdown differently from a normal
+  // climb leading into another question.
+  isFinal: boolean;
 }
 
 export interface MatchFreezeStartEvent {

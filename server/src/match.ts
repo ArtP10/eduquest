@@ -122,7 +122,8 @@ function startFinalClimbPhase(io: IoServer, room: Room): void {
     durationMs: FINAL_CLIMB_DURATION_MS,
     serverTime,
     phaseEndsAt: room.phaseEndsAt,
-    leaderboard: buildLeaderboard(room)
+    leaderboard: buildLeaderboard(room),
+    isFinal: true
   });
 
   room.phaseTimer = setTimeout(() => void endMatch(io, room), FINAL_CLIMB_DURATION_MS);
@@ -141,7 +142,8 @@ function startClimbPhase(io: IoServer, room: Room): void {
     durationMs: CLIMB_DURATION_MS,
     serverTime,
     phaseEndsAt: room.phaseEndsAt,
-    leaderboard: buildLeaderboard(room)
+    leaderboard: buildLeaderboard(room),
+    isFinal: false
   });
 
   room.phaseTimer = setTimeout(() => startFreezePhase(io, room), CLIMB_DURATION_MS);
