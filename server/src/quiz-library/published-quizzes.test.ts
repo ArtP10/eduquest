@@ -25,6 +25,31 @@ describe('listPublishedQuizzes', () => {
     expect(rowsSql).toContain(`q.status = 'published'`);
   });
 
+  it('also includes built-in sample quizzes (draft status, no author) alongside published ones', async () => {
+    mockCountThenRows(0, []);
+    await listPublishedQuizzes({ page: 1, limit: 20 });
+    const [countSql] = query.mock.calls[0]!;
+    const [rowsSql] = query.mock.calls[1]!;
+    expect(countSql).toContain('q.is_sample = true');
+    expect(rowsSql).toContain('LEFT JOIN users u ON u.id = q.author_id');
+  });
+
+  it('falls back to a placeholder author label for authorless (sample) quizzes', async () => {
+    mockCountThenRows(1, [
+      {
+        id: 'sample-1',
+        title: 'Cultura General',
+        author_username: 'QuizJumper',
+        play_count: 0,
+        question_count: '5',
+        tags: [],
+        average_grade: null
+      }
+    ]);
+    const { quizzes } = await listPublishedQuizzes({ page: 1, limit: 20 });
+    expect(quizzes[0]!.authorUsername).toBe('QuizJumper');
+  });
+
   it('adds an ILIKE title condition when search is provided', async () => {
     mockCountThenRows(0, []);
     await listPublishedQuizzes({ page: 1, limit: 20, search: 'algebra' });

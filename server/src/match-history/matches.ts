@@ -161,6 +161,8 @@ export interface MatchDetail {
   roomCreatorId: string | null;
   leaderboard: MatchLeaderboardEntry[];
   questionStats: MatchQuestionStats[];
+  /** This match's own aggregate percent-correct, across every answer recorded in it — distinct from quizGlobalStats below, which is all-time across every match of this quiz. Null only if this match somehow has no recorded answers. */
+  matchAverageGrade: number | null;
   quizGlobalStats: QuizGlobalStats | null;
 }
 
@@ -204,6 +206,20 @@ export async function getMatchDetail(matchId: string): Promise<MatchDetail | nul
 
   const quizGlobalStats = await getQuizGlobalStats(match.quiz_id);
 
+  const questionStats = statsRows.map((row) => {
+    const correctCount = Number(row.correct_count);
+    const totalCount = Number(row.total_count);
+    return {
+      questionIndex: row.question_index,
+      correctCount,
+      totalCount,
+      percentCorrect: totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0
+    };
+  });
+  const matchTotalAnswers = questionStats.reduce((sum, q) => sum + q.totalCount, 0);
+  const matchTotalCorrect = questionStats.reduce((sum, q) => sum + q.correctCount, 0);
+  const matchAverageGrade = matchTotalAnswers > 0 ? Math.round((matchTotalCorrect / matchTotalAnswers) * 100) : null;
+
   return {
     id: match.id,
     quizId: match.quiz_id,
@@ -218,16 +234,8 @@ export async function getMatchDetail(matchId: string): Promise<MatchDetail | nul
       finalPlacement: row.final_placement,
       finalHeight: row.final_height
     })),
-    questionStats: statsRows.map((row) => {
-      const correctCount = Number(row.correct_count);
-      const totalCount = Number(row.total_count);
-      return {
-        questionIndex: row.question_index,
-        correctCount,
-        totalCount,
-        percentCorrect: totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0
-      };
-    }),
+    questionStats,
+    matchAverageGrade,
     quizGlobalStats
   };
 }

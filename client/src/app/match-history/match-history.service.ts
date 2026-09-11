@@ -43,6 +43,8 @@ export interface MatchDetail {
   roomCreatorId: string | null;
   leaderboard: MatchLeaderboardEntry[];
   questionStats: MatchQuestionStats[];
+  /** This match's own aggregate percent-correct — distinct from quizGlobalStats, which is all-time across every match of this quiz. */
+  matchAverageGrade: number | null;
   quizGlobalStats: QuizGlobalStats | null;
 }
 

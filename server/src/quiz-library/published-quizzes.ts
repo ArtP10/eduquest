@@ -63,11 +63,13 @@ export async function listPublishedQuizzes(
   const sort: PublishedQuizSort = params.sort ?? 'newest';
   const orderBy = ORDER_BY_SQL[sort];
 
-  // is_sample is redundant with status = 'published' (sample quizzes are
-  // seeded as 'draft' — see 1788600000003_add-sample-quiz-support) but kept
-  // explicit: this listing must never surface a built-in sample quiz
-  // regardless of how its status ever ends up set.
-  const conditions: string[] = [`q.status = 'published'`, `q.is_sample = false`];
+  // Built-in sample quizzes are seeded as 'draft' (see
+  // 1788600000003_add-sample-quiz-support) since they're never author-owned
+  // or editable — but they ARE meant to show up here, alongside published
+  // user quizzes, as permanently-available library entries. Regular
+  // author-created quizzes still require `published` status; only the
+  // `is_sample` flag (never user-settable) gets to bypass that.
+  const conditions: string[] = [`(q.status = 'published' OR q.is_sample = true)`];
   const values: unknown[] = [];
 
   if (params.search && params.search.trim()) {
@@ -96,7 +98,11 @@ export async function listPublishedQuizzes(
     `SELECT
        q.id,
        q.title,
-       u.username AS author_username,
+       -- Built-in sample quizzes have no author row at all (author_id is
+       -- null — see 1788600000003_add-sample-quiz-support), so the join
+       -- below is a LEFT JOIN and this falls back to a placeholder label
+       -- instead of leaving them out of the listing entirely.
+       COALESCE(u.username, 'QuizJumper') AS author_username,
        q.play_count,
        (SELECT COUNT(*) FROM questions WHERE questions.quiz_id = q.id) AS question_count,
        COALESCE(array_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '{}') AS tags,
@@ -105,7 +111,7 @@ export async function listPublishedQuizzes(
         JOIN matches m ON m.id = ma.match_id
         WHERE m.quiz_id = q.id) AS average_grade
      FROM quizzes q
-     JOIN users u ON u.id = q.author_id
+     LEFT JOIN users u ON u.id = q.author_id
      LEFT JOIN quiz_tags qt ON qt.quiz_id = q.id
      LEFT JOIN tags t ON t.id = qt.tag_id
      WHERE ${whereSql}

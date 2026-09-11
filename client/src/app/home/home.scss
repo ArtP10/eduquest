@@ -19,49 +19,79 @@
   justify-content: center;
 }
 
+// Same layout/classes as match-history's match-detail page (see its .scss) —
+// the live end screen mirrors that historical view exactly, so the two are
+// kept visually identical on purpose.
 .ended {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
-  padding: 2rem;
-  min-width: 320px;
-
-  h2 {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: 0.9rem;
-    color: var(--ucab-gold);
-  }
+  max-width: 640px;
+  width: 100%;
 }
 
-.placements {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
+.averages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
 
-  li {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    padding: 0.35rem 0;
-    font-family: var(--font-data);
-    font-size: 1.15rem;
-    color: var(--ucab-paper-dim);
-    border-bottom: 1px solid var(--ucab-ink-3);
-  }
+.match-average {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ucab-blue);
+  font-weight: 700;
+}
+
+.global-average {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ucab-gold);
+  font-weight: 700;
+}
+
+.section-title {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  color: var(--ucab-paper);
+}
+
+.leaderboard {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.75rem;
+  background: var(--ucab-ink-3);
+  font-size: 0.8rem;
 
   .rank {
-    color: var(--ucab-gold);
-    min-width: 2.5rem;
+    color: var(--ucab-blue);
+    font-weight: 700;
   }
 
-  .label {
+  .nickname {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ucab-paper);
   }
 
-  .value {
-    color: var(--ucab-paper);
+  .score {
+    color: var(--ucab-paper-dim);
+  }
+
+  .height {
+    color: var(--ucab-blue);
+    font-size: 0.75rem;
   }
 }

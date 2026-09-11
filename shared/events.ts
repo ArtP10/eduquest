@@ -142,9 +142,29 @@ export interface MatchResultsEvent {
   phaseEndsAt: number;
 }
 
+/** Per-question correct/total breakdown, scoped to one match (see MatchEndedEvent). */
+export interface MatchQuestionStat {
+  questionIndex: number;
+  correctCount: number;
+  totalCount: number;
+  percentCorrect: number;
+}
+
+/** A quiz's aggregate percent-correct across every match ever recorded for it. */
+export interface QuizGlobalStats {
+  percentCorrect: number;
+  averageGrade: number;
+}
+
 export interface MatchEndedEvent {
   leaderboard: LeaderboardEntry[];
   placements: PlacementEntry[];
+  quizTitle: string;
+  /** This match's own aggregate percent-correct across every answer submitted in it — computed in-memory, always present, independent of match-history persistence. */
+  matchAverageGrade: number;
+  questionStats: MatchQuestionStat[];
+  /** All-time percent-correct across every OTHER recorded match of this quiz (this match's own answers are persisted asynchronously after this event, so they aren't counted yet — see match.ts's endMatch). Null if this quiz has no prior recorded plays, or the historical lookup failed. */
+  quizGlobalStats: QuizGlobalStats | null;
 }
 
 export interface LeaderboardUpdateEvent {

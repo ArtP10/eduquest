@@ -15,7 +15,9 @@ import type {
   RoomJoinResponse,
   RoomStartResponse,
   AnswerSubmitResponse,
-  PlayerPosition
+  PlayerPosition,
+  MatchQuestionStat,
+  QuizGlobalStats
 } from '@quizjumper/shared/events';
 
 @Injectable({ providedIn: 'root' })
@@ -45,6 +47,13 @@ export class SocketService {
 
   readonly leaderboard = signal<LeaderboardEntry[]>([]);
   readonly finalPlacements = signal<PlacementEntry[]>([]);
+  // Populated only once match:ended fires — lets the live end screen mirror
+  // the historical match-detail page (same averages, same per-question
+  // breakdown) without a separate HTTP round-trip.
+  readonly endedQuizTitle = signal<string | null>(null);
+  readonly matchAverageGrade = signal<number | null>(null);
+  readonly questionStats = signal<MatchQuestionStat[]>([]);
+  readonly quizGlobalStats = signal<QuizGlobalStats | null>(null);
 
   readonly errorMessage = signal<string | null>(null);
 
@@ -100,6 +109,10 @@ export class SocketService {
       this.matchPhase.set('ended');
       this.leaderboard.set(event.leaderboard);
       this.finalPlacements.set(event.placements);
+      this.endedQuizTitle.set(event.quizTitle);
+      this.matchAverageGrade.set(event.matchAverageGrade);
+      this.questionStats.set(event.questionStats);
+      this.quizGlobalStats.set(event.quizGlobalStats);
     });
   }
 
@@ -169,6 +182,10 @@ export class SocketService {
     this.myModifier.set('none');
     this.leaderboard.set([]);
     this.finalPlacements.set([]);
+    this.endedQuizTitle.set(null);
+    this.matchAverageGrade.set(null);
+    this.questionStats.set([]);
+    this.quizGlobalStats.set(null);
     this.errorMessage.set(null);
     this.platformSeed.set(null);
     this.playerPositions.set({});

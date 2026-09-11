@@ -4,11 +4,13 @@ import type {
   ServerToClientEvents,
   LeaderboardEntry,
   AnswerResult,
-  PlayerPosition
+  PlayerPosition,
+  MatchQuestionStat,
+  QuizGlobalStats
 } from '@quizjumper/shared/events';
-import { connectedPlayerIds, getLobbyPlayerList, type Room } from './rooms.js';
+import { connectedPlayerIds, getLobbyPlayerList, type MatchAnswerRecord, type Room } from './rooms.js';
 import { rankPlayersByClimbProgress } from './scoring.js';
-import { persistMatch } from './match-history/matches.js';
+import { persistMatch, getQuizGlobalStats } from './match-history/matches.js';
 
 type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -85,7 +87,7 @@ export function startMatch(io: IoServer, room: Room): void {
 function advanceToNextQuestion(io: IoServer, room: Room): void {
   const nextIndex = room.currentQuestionIndex + 1;
   if (nextIndex >= room.quiz.questions.length) {
-    endMatch(io, room);
+    void endMatch(io, room);
     return;
   }
   room.currentQuestionIndex = nextIndex;
@@ -211,7 +213,38 @@ function startResultsPhase(io: IoServer, room: Room): void {
   room.phaseTimer = setTimeout(() => advanceToNextQuestion(io, room), RESULTS_DISPLAY_MS);
 }
 
-function endMatch(io: IoServer, room: Room): void {
+/**
+ * This match's own per-question and overall percent-correct, computed
+ * in-memory from `room.answerLog` — deliberately NOT a DB read (unlike
+ * `getQuizGlobalStats` below), so it's always available the instant the
+ * match ends, with no dependency on `persistMatch` having run yet.
+ */
+function computeMatchStats(answerLog: MatchAnswerRecord[]): {
+  matchAverageGrade: number;
+  questionStats: MatchQuestionStat[];
+} {
+  const byQuestion = new Map<number, { correct: number; total: number }>();
+  let correctTotal = 0;
+  for (const entry of answerLog) {
+    const bucket = byQuestion.get(entry.questionIndex) ?? { correct: 0, total: 0 };
+    bucket.total += 1;
+    if (entry.isCorrect) correctTotal += 1;
+    if (entry.isCorrect) bucket.correct += 1;
+    byQuestion.set(entry.questionIndex, bucket);
+  }
+  const questionStats = [...byQuestion.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([questionIndex, { correct, total }]) => ({
+      questionIndex,
+      correctCount: correct,
+      totalCount: total,
+      percentCorrect: total > 0 ? Math.round((correct / total) * 100) : 0
+    }));
+  const matchAverageGrade = answerLog.length > 0 ? Math.round((correctTotal / answerLog.length) * 100) : 0;
+  return { matchAverageGrade, questionStats };
+}
+
+async function endMatch(io: IoServer, room: Room): Promise<void> {
   clearPhaseTimer(room);
   stopPositionBroadcast(room);
   room.status = 'ended';
@@ -229,9 +262,26 @@ function endMatch(io: IoServer, room: Room): void {
     climbProgress: entry.climbProgress
   }));
 
+  const { matchAverageGrade, questionStats } = computeMatchStats(room.answerLog);
+
+  // Historical (all-time) figure is a DB read of data that already existed
+  // before this match — unlike persistMatch below, it's fine to await
+  // briefly before emitting, but a failure here must still never prevent
+  // match:ended from firing, so it degrades to null instead of throwing.
+  let quizGlobalStats: QuizGlobalStats | null = null;
+  try {
+    quizGlobalStats = await getQuizGlobalStats(room.quiz.id);
+  } catch (err) {
+    console.error(`Failed to load historical quiz stats for room ${room.code}:`, err);
+  }
+
   io.to(room.code).emit('match:ended', {
     leaderboard: buildLeaderboard(room),
-    placements
+    placements,
+    quizTitle: room.quiz.title,
+    matchAverageGrade,
+    questionStats,
+    quizGlobalStats
   });
 
   // Fire-and-forget: persistence failure must never affect the match that

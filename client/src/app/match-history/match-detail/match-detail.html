@@ -11,9 +11,14 @@
   <app-pixel-panel [title]="m.quizTitle" class="match-detail">
     <p class="played-at">{{ m.playedAt | date: 'medium' }}</p>
 
-    @if (m.quizGlobalStats; as stats) {
-      <p class="global-average">Promedio histórico del cuestionario (todas las partidas): {{ stats.averageGrade }}/100</p>
-    }
+    <div class="averages">
+      @if (m.matchAverageGrade !== null) {
+        <p class="match-average">Promedio de esta partida: {{ m.matchAverageGrade }}/100</p>
+      }
+      @if (m.quizGlobalStats; as stats) {
+        <p class="global-average">Promedio histórico del cuestionario (todas las partidas): {{ stats.averageGrade }}/100</p>
+      }
+    </div>
 
     <h3 class="section-title">Tabla de posiciones</h3>
     <ul class="leaderboard">

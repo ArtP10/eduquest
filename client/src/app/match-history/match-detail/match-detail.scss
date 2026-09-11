@@ -27,6 +27,19 @@
   color: var(--ucab-paper-dim);
 }
 
+.averages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.match-average {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ucab-blue);
+  font-weight: 700;
+}
+
 .global-average {
   margin: 0;
   font-size: 0.85rem;
