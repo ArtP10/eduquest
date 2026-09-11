@@ -27,7 +27,7 @@
           <div class="leaderboard-row">
             <span class="rank">#{{ entry.finalPlacement }}</span>
             <span class="nickname">{{ entry.nickname }}</span>
-            <span class="score">{{ entry.finalScore }} pts</span>
+            <span class="score">Nota: {{ entry.finalScore }}/{{ m.questionStats.length }}</span>
             @if (entry.finalHeight !== null) {
               <span class="height">Altura: {{ entry.finalHeight | number: '1.0-0' }}</span>
             }

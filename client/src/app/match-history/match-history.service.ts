@@ -11,6 +11,8 @@ export interface MatchSummary {
   isHost: boolean;
   finalScore: number;
   finalPlacement: number;
+  /** Total questions in this match — score is shown as "finalScore/questionCount". */
+  questionCount: number;
 }
 
 export interface MatchLeaderboardEntry {

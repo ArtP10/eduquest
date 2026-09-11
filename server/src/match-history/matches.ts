@@ -99,6 +99,8 @@ export interface MatchSummary {
   isHost: boolean;
   finalScore: number;
   finalPlacement: number;
+  /** Total questions in this match — score is shown as "finalScore/questionCount", not a bare point total. */
+  questionCount: number;
 }
 
 /** Every match a user participated in (as player and/or host), with their own score/placement. */
@@ -111,9 +113,11 @@ export async function listMatchesForUser(userId: string): Promise<MatchSummary[]
     room_creator_id: string | null;
     final_score: number;
     final_placement: number;
+    question_count: string;
   }>(
     `SELECT m.id, m.quiz_id, m.quiz_title, m.played_at, m.room_creator_id,
-            mp.final_score, mp.final_placement
+            mp.final_score, mp.final_placement,
+            (SELECT COUNT(DISTINCT question_index) FROM match_answers WHERE match_answers.match_id = m.id) AS question_count
      FROM match_players mp
      JOIN matches m ON m.id = mp.match_id
      WHERE mp.user_id = $1
@@ -126,6 +130,7 @@ export async function listMatchesForUser(userId: string): Promise<MatchSummary[]
     quizTitle: row.quiz_title,
     playedAt: row.played_at,
     isHost: row.room_creator_id === userId,
+    questionCount: Number(row.question_count),
     finalScore: row.final_score,
     finalPlacement: row.final_placement
   }));

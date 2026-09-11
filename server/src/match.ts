@@ -16,6 +16,13 @@ type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
 const CLIMB_DURATION_MS = 8000;
 const RESULTS_DISPLAY_MS = 4000;
+// After the LAST question's results, every other question would get one
+// more climb phase where the boost/slowdown just earned actually plays out —
+// without this, the match cut straight from "here's whether you got the
+// final question right" to the end screen, so that last answer's reward/
+// penalty was computed but never visually experienced. Shorter than a normal
+// CLIMB_DURATION_MS since there's no next question to read/prepare for.
+const FINAL_CLIMB_DURATION_MS = 4000;
 // Ghost sprites interpolate across this window client-side, so it's both the
 // fan-out rate and the perceived smoothness knob (see design.md decision 3).
 const POSITION_BROADCAST_MS = 100;
@@ -87,11 +94,37 @@ export function startMatch(io: IoServer, room: Room): void {
 function advanceToNextQuestion(io: IoServer, room: Room): void {
   const nextIndex = room.currentQuestionIndex + 1;
   if (nextIndex >= room.quiz.questions.length) {
-    void endMatch(io, room);
+    startFinalClimbPhase(io, room);
     return;
   }
   room.currentQuestionIndex = nextIndex;
   startClimbPhase(io, room);
+}
+
+/**
+ * One last climb after the final question's results, so the boost/slowdown
+ * that question just earned actually plays out before the match ends —
+ * otherwise it was computed and shown in the results overlay but the player
+ * never got to act on it. `currentQuestionIndex` deliberately stays put
+ * (still the last real question) so the HUD keeps reading "Pregunta N/N"
+ * rather than implying a question N+1 exists.
+ */
+function startFinalClimbPhase(io: IoServer, room: Room): void {
+  clearPhaseTimer(room);
+  room.status = 'climbing';
+  const serverTime = Date.now();
+  room.phaseEndsAt = serverTime + FINAL_CLIMB_DURATION_MS;
+
+  io.to(room.code).emit('match:climb-start', {
+    questionIndex: room.currentQuestionIndex,
+    totalQuestions: room.quiz.questions.length,
+    durationMs: FINAL_CLIMB_DURATION_MS,
+    serverTime,
+    phaseEndsAt: room.phaseEndsAt,
+    leaderboard: buildLeaderboard(room)
+  });
+
+  room.phaseTimer = setTimeout(() => void endMatch(io, room), FINAL_CLIMB_DURATION_MS);
 }
 
 function startClimbPhase(io: IoServer, room: Room): void {
@@ -264,10 +297,23 @@ async function endMatch(io: IoServer, room: Room): Promise<void> {
 
   const { matchAverageGrade, questionStats } = computeMatchStats(room.answerLog);
 
-  // Historical (all-time) figure is a DB read of data that already existed
-  // before this match — unlike persistMatch below, it's fine to await
-  // briefly before emitting, but a failure here must still never prevent
-  // match:ended from firing, so it degrades to null instead of throwing.
+  // Persisted BEFORE reading the historical figure below (unlike the
+  // fire-and-forget pattern design.md decision 4 describes elsewhere) so
+  // this match's own answers are already counted in quizGlobalStats the
+  // instant players see the end screen — otherwise the "all-time" average
+  // would visibly lag one match behind until the next time it's viewed. A
+  // failure here still must never block match:ended from firing, so it's
+  // caught and logged rather than awaited-and-thrown.
+  try {
+    await persistMatch(room, placements);
+  } catch (err) {
+    console.error(`Failed to persist match history for room ${room.code}:`, err);
+  }
+
+  // Historical (all-time) figure — read after the above so it includes this
+  // match when persistence succeeded. A failure here must also never
+  // prevent match:ended from firing, so it degrades to null instead of
+  // throwing.
   let quizGlobalStats: QuizGlobalStats | null = null;
   try {
     quizGlobalStats = await getQuizGlobalStats(room.quiz.id);
@@ -282,12 +328,6 @@ async function endMatch(io: IoServer, room: Room): Promise<void> {
     matchAverageGrade,
     questionStats,
     quizGlobalStats
-  });
-
-  // Fire-and-forget: persistence failure must never affect the match that
-  // already ended for connected clients — see design.md decision 4.
-  persistMatch(room, placements).catch((err) => {
-    console.error(`Failed to persist match history for room ${room.code}:`, err);
   });
 }
 

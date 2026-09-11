@@ -17,7 +17,7 @@
         <li class="leaderboard-row">
           <span class="rank">#{{ row.rank }}</span>
           <span class="nickname">{{ row.nickname }}</span>
-          <span class="score">{{ row.score }} pts</span>
+          <span class="score">Nota: {{ row.score }}/{{ socketService.totalQuestions() }}</span>
           <span class="height">Altura: {{ row.height | number: '1.0-0' }}</span>
         </li>
       }

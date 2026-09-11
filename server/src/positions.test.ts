@@ -2,7 +2,10 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { PlayersPositionsEvent } from '@quizjumper/shared/events';
 import type { Quiz } from '@quizjumper/shared/quiz';
 
-vi.mock('./match-history/matches.js', () => ({ persistMatch: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./match-history/matches.js', () => ({
+  persistMatch: vi.fn().mockResolvedValue(undefined),
+  getQuizGlobalStats: vi.fn().mockResolvedValue(null)
+}));
 
 const { createRoom, addPlayer, removePlayerBySocketId, setPlayerPosition, deleteRoom } = await import(
   './rooms.js'
@@ -119,8 +122,9 @@ describe('players:positions broadcast', () => {
     addPlayer(room, { displayName: 'Beto', socketId: 'socket-b' });
 
     startMatch(io, room);
-    // Climb (8s) -> freeze (10s) -> results (4s) -> end, for the single question.
-    vi.advanceTimersByTime(8000 + 10_000 + 4000 + 10);
+    // Climb (8s) -> freeze (10s) -> results (4s) -> final climb (4s) -> end,
+    // for the single question (see match.ts's startFinalClimbPhase).
+    vi.advanceTimersByTime(8000 + 10_000 + 4000 + 4000 + 10);
     expect(room.status).toBe('ended');
 
     calls.length = 0;
