@@ -27,3 +27,9 @@
 - [ ] 4.3 Verify leaving the room mid-sequence (e.g. via "Volver al inicio" from a prior match, or navigating away) doesn't throw and doesn't continue firing timers/sounds after leaving
 - [ ] 4.4 Verify "View Match Details" reveals the stats screen with unchanged content/behavior (drill-down, averages, question stats all still work)
 - [x] 4.5 Run `npx tsc --noEmit` (or the project's existing typecheck script) for the client app
+
+## 5. Congrats message and confetti
+
+- [x] 5.1 Add a `congratsVisible` signal and `winnerName` computed (1st-place `displayName`) to `VictorySequence`, shown as an animated "¡Felicidades, [name]!" message near the bottom of the interstitial shortly after the 1st-place row is revealed
+- [x] 5.2 Add a confetti animation (`confettiPieces` generated once, CSS `@keyframes` fall animation) that starts at the same time as the congrats message
+- [x] 5.3 Verify build/typecheck still pass with the new elements

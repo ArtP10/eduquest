@@ -1,4 +1,19 @@
 <div class="victory-overlay">
+  @if (confettiActive()) {
+    <div class="confetti" aria-hidden="true">
+      @for (piece of confettiPieces; track $index) {
+        <span
+          class="confetti-piece"
+          [style.left.%]="piece.left"
+          [style.animation-delay.ms]="piece.delayMs"
+          [style.animation-duration.ms]="piece.durationMs"
+          [style.background]="piece.color"
+          [style.transform]="'rotate(' + piece.rotationDeg + 'deg)'"
+        ></span>
+      }
+    </div>
+  }
+
   @if (phase() === 'stop') {
     <div class="stop-banner">
       <span class="stop-banner-text">¡Partida terminada!</span>
@@ -20,6 +35,10 @@
         }
       }
     </div>
+
+    @if (congratsVisible()) {
+      <p class="congrats-message">¡Felicidades, {{ winnerName() }}!</p>
+    }
 
     @if (phase() === 'done') {
       <app-pixel-button (click)="onViewDetails()">Ver detalles de la partida</app-pixel-button>

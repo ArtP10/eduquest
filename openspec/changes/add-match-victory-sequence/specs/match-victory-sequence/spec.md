@@ -30,6 +30,14 @@ After the stop banner, the interstitial SHALL reveal the top 3 placements one at
 - **AND** no placeholder is shown for a missing 2nd- or 3rd-place slot
 - **AND** the drumroll-and-congrats sound still plays during this stage, timed so its congrats hit lands when 1st place is revealed, the same as with 3 or more players
 
+### Requirement: Congrats message and confetti on 1st place
+After the 1st-place row is revealed, the interstitial SHALL show an animated "¡Felicidades, [winner's name]!" message near the bottom of the interstitial, along with a confetti animation.
+
+#### Scenario: 1st place is revealed
+- **WHEN** the 1st-place podium row is revealed
+- **THEN** shortly after, an animated congrats message reading "¡Felicidades, [winner's name]!" appears near the bottom of the interstitial, using the winner's display name
+- **AND** a confetti animation starts at the same time
+
 ### Requirement: View Match Details handoff
 Once the top-3 reveal finishes, the interstitial SHALL show a "View Match Details" button that, when clicked, shows the existing final stats/leaderboard screen unchanged.
 

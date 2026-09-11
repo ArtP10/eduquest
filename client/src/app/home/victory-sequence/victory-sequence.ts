@@ -22,7 +22,22 @@ const STOP_BANNER_MS = 1400;
 const REVEAL_3RD_AT_MS = 0;
 const REVEAL_2ND_AT_MS = 700;
 const REVEAL_1ST_AT_MS = 1800;
-const DONE_DELAY_MS = 1200;
+// Delay after the 1st-place row appears before the congrats message/confetti
+// kick in — keeps them visibly reacting to the 1st-place reveal rather than
+// popping in at the exact same instant.
+const CONGRATS_DELAY_MS = 350;
+const DONE_DELAY_MS = 1800;
+
+const CONFETTI_PIECE_COUNT = 36;
+const CONFETTI_COLORS = ['var(--ucab-gold)', 'var(--ucab-blue)', 'var(--ucab-green)', 'var(--ucab-paper)'];
+
+interface ConfettiPiece {
+  left: number;
+  delayMs: number;
+  durationMs: number;
+  color: string;
+  rotationDeg: number;
+}
 
 /**
  * End-of-match "podium" interstitial shown before the existing stats screen
@@ -45,6 +60,19 @@ export class VictorySequence implements OnInit, OnDestroy {
 
   protected readonly phase = signal<Phase>('stop');
   protected readonly visibleRanks = signal<ReadonlySet<number>>(new Set());
+  protected readonly congratsVisible = signal(false);
+  protected readonly confettiActive = signal(false);
+
+  // Generated once per mount, not a signal — purely decorative and never
+  // needs to react to state changes, just to exist by the time confetti is
+  // shown.
+  protected readonly confettiPieces: ConfettiPiece[] = Array.from({ length: CONFETTI_PIECE_COUNT }, () => ({
+    left: Math.random() * 100,
+    delayMs: Math.random() * 300,
+    durationMs: 1800 + Math.random() * 1200,
+    color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+    rotationDeg: Math.random() * 360
+  }));
 
   private readonly timers: ReturnType<typeof setTimeout>[] = [];
 
@@ -61,6 +89,8 @@ export class VictorySequence implements OnInit, OnDestroy {
         displayName: byPlayerId.get(placement.playerId)?.displayName ?? ''
       }));
   });
+
+  protected readonly winnerName = computed(() => this.podium().find((row) => row.rank === 1)?.displayName ?? '');
 
   ngOnInit(): void {
     this.audioService.play('air-horn-sound');
@@ -82,7 +112,13 @@ export class VictorySequence implements OnInit, OnDestroy {
     const ranksPresent = new Set(this.podium().map((row) => row.rank));
     if (ranksPresent.has(3)) this.schedule(REVEAL_3RD_AT_MS, () => this.revealRank(3));
     if (ranksPresent.has(2)) this.schedule(REVEAL_2ND_AT_MS, () => this.revealRank(2));
-    if (ranksPresent.has(1)) this.schedule(REVEAL_1ST_AT_MS, () => this.revealRank(1));
+    if (ranksPresent.has(1)) {
+      this.schedule(REVEAL_1ST_AT_MS, () => this.revealRank(1));
+      this.schedule(REVEAL_1ST_AT_MS + CONGRATS_DELAY_MS, () => {
+        this.congratsVisible.set(true);
+        this.confettiActive.set(true);
+      });
+    }
     this.schedule(REVEAL_1ST_AT_MS + DONE_DELAY_MS, () => this.phase.set('done'));
   }
 
