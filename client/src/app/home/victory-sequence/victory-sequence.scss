@@ -29,9 +29,12 @@
   text-align: center;
 }
 
-.podium {
+// column-reverse so DOM order (3rd, 2nd, 1st, congrats — the reveal order)
+// stacks bottom-to-top: 3rd at the bottom, 1st on top of 2nd, the congrats
+// message on top of 1st.
+.podium-stack {
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   gap: 0.75rem;
   width: min(90vw, 360px);
 }

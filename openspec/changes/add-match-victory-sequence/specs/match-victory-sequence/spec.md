@@ -17,25 +17,25 @@ The interstitial SHALL open with an animated stop/banner message and play an air
 - **AND** the air-horn sound effect plays at the same time
 
 ### Requirement: Staggered top-3 reveal synced to drumroll
-After the stop banner, the interstitial SHALL reveal the top 3 placements one at a time — 3rd place, then 2nd, then 1st — each with its own brief entrance animation, while a drumroll-and-congrats sound plays leading into the 1st-place reveal so the sound's congrats hit coincides with 1st place appearing.
+After the stop banner, the interstitial SHALL reveal the top 3 placements one at a time — 3rd place, then 2nd, then 1st — each with its own brief entrance animation, stacked so that each newly revealed place appears on top of the previously revealed one(s), while a drumroll-and-congrats sound plays leading into the 1st-place reveal so the sound's congrats hit coincides with 1st place appearing.
 
 #### Scenario: Three or more players
 - **WHEN** the stop banner stage finishes and at least 3 placements exist
-- **THEN** 3rd place is revealed first, then 2nd place, then 1st place, each as a separate staggered animation
+- **THEN** 3rd place is revealed first at the bottom of the stack, then 2nd place appears stacked on top of 3rd, then 1st place appears stacked on top of 2nd, each as a separate staggered animation
 - **AND** the drumroll-and-congrats sound plays during this stage, timed so its congrats hit lands when 1st place is revealed
 
 #### Scenario: Fewer than three players
 - **WHEN** the stop banner stage finishes and fewer than 3 placements exist
-- **THEN** only the placements that exist are revealed, in ascending rank order (worst to best), ending on 1st place
+- **THEN** only the placements that exist are revealed, in ascending rank order (worst to best), each stacked on top of the previous, ending with 1st place at the top of the stack
 - **AND** no placeholder is shown for a missing 2nd- or 3rd-place slot
 - **AND** the drumroll-and-congrats sound still plays during this stage, timed so its congrats hit lands when 1st place is revealed, the same as with 3 or more players
 
 ### Requirement: Congrats message and confetti on 1st place
-After the 1st-place row is revealed, the interstitial SHALL show an animated "¡Felicidades, [winner's name]!" message near the bottom of the interstitial, along with a confetti animation.
+After the 1st-place row is revealed, the interstitial SHALL show an animated "¡Felicidades, [winner's name]!" message stacked on top of the 1st-place row, along with a confetti animation.
 
 #### Scenario: 1st place is revealed
 - **WHEN** the 1st-place podium row is revealed
-- **THEN** shortly after, an animated congrats message reading "¡Felicidades, [winner's name]!" appears near the bottom of the interstitial, using the winner's display name
+- **THEN** shortly after, an animated congrats message reading "¡Felicidades, [winner's name]!" appears stacked on top of the 1st-place row, using the winner's display name
 - **AND** a confetti animation starts at the same time
 
 ### Requirement: View Match Details handoff

@@ -30,6 +30,11 @@
 
 ## 5. Congrats message and confetti
 
-- [x] 5.1 Add a `congratsVisible` signal and `winnerName` computed (1st-place `displayName`) to `VictorySequence`, shown as an animated "¡Felicidades, [name]!" message near the bottom of the interstitial shortly after the 1st-place row is revealed
+- [x] 5.1 Add a `congratsVisible` signal and `winnerName` computed (1st-place `displayName`) to `VictorySequence`, shown as an animated "¡Felicidades, [name]!" message shortly after the 1st-place row is revealed
 - [x] 5.2 Add a confetti animation (`confettiPieces` generated once, CSS `@keyframes` fall animation) that starts at the same time as the congrats message
 - [x] 5.3 Verify build/typecheck still pass with the new elements
+
+## 6. Stacked reveal layout
+
+- [x] 6.1 Change `.podium` to `.podium-stack` with `flex-direction: column-reverse`, keeping DOM order 3rd → 2nd → 1st → congrats-message so each is visually stacked on top of the previous (3rd at the bottom, 1st on top of 2nd, congrats message on top of 1st)
+- [x] 6.2 Verify build/typecheck still pass with the restructured layout

@@ -19,7 +19,11 @@
       <span class="stop-banner-text">¡Partida terminada!</span>
     </div>
   } @else {
-    <div class="podium">
+    <!-- column-reverse stack: DOM order is 3rd, 2nd, 1st, congrats — the
+         first child renders at the bottom and each later one stacks on top,
+         so 3rd ends up at the bottom, 1st on top of 2nd, and the congrats
+         message on top of 1st. -->
+    <div class="podium-stack">
       @for (row of podium(); track row.rank) {
         @if (visibleRanks().has(row.rank)) {
           <div class="podium-row" [class.first]="row.rank === 1">
@@ -34,11 +38,11 @@
           </div>
         }
       }
-    </div>
 
-    @if (congratsVisible()) {
-      <p class="congrats-message">¡Felicidades, {{ winnerName() }}!</p>
-    }
+      @if (congratsVisible()) {
+        <p class="congrats-message">¡Felicidades, {{ winnerName() }}!</p>
+      }
+    </div>
 
     @if (phase() === 'done') {
       <app-pixel-button (click)="onViewDetails()">Ver detalles de la partida</app-pixel-button>
