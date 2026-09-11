@@ -2,7 +2,11 @@
   <h3>Clasificación</h3>
   <ol>
     @for (entry of socketService.leaderboard(); track entry.playerId) {
-      <li [class.me]="entry.playerId === socketService.playerId()" [class.first]="entry.rank === 1">
+      <li
+        [class.me]="entry.playerId === socketService.playerId()"
+        [class.first]="entry.rank === 1"
+        [class.disconnected]="!entry.connected"
+      >
         <span class="rank">
           @if (entry.rank === 1) {
             <app-pixel-icon name="trophy" [size]="16" />
@@ -10,7 +14,12 @@
             #{{ entry.rank }}
           }
         </span>
-        <span class="name">{{ entry.displayName }}</span>
+        <span class="name">
+          {{ entry.displayName }}
+          @if (!entry.connected) {
+            <span class="disconnected-tag">Desconectado</span>
+          }
+        </span>
         <span class="score" title="Respuestas correctas">{{ entry.score }}/{{ entry.answered }}</span>
         <span class="points" title="Altura">{{ entry.points | number: '1.0-0' }}</span>
       </li>

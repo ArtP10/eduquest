@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Type-only contracts shared between the QuizJumper server and client.",
+  "description": "Contracts (and the seeded PRNG both sides must agree on) shared between the QuizJumper server and client.",
   "exports": {
     "./events": "./events.ts",
-    "./quiz": "./quiz.ts"
+    "./quiz": "./quiz.ts",
+    "./prng": "./prng.ts"
   },
   "files": [
     "events.ts",
-    "quiz.ts"
+    "quiz.ts",
+    "prng.ts"
   ]
 }

@@ -23,9 +23,11 @@ export interface LeaderboardEntry {
   points: number;
   /** Number of correctly-answered questions. */
   score: number;
-  /** Number of questions answered (scored) so far. */
+  /** Number of questions answered (scored) so far — stops incrementing once a player disconnects, rather than counting every remaining question as a silent wrong answer. */
   answered: number;
   rank: number;
+  /** False once this player has disconnected mid-match (see rooms.ts removePlayerBySocketId) — still shown on the leaderboard with their last-known standing, but frozen from further scoring. */
+  connected: boolean;
 }
 
 export interface AnswerResult {
@@ -38,6 +40,16 @@ export interface PlacementEntry {
   playerId: string;
   rank: number;
   climbProgress: number;
+}
+
+export type PlayerAnimKey = 'idle' | 'walk' | 'jump';
+
+/** A player's live world-space position and visual state, as reported by their own client. */
+export interface PlayerPosition {
+  x: number;
+  y: number;
+  facingRight: boolean;
+  animKey: PlayerAnimKey;
 }
 
 // --- Client -> Server ---
@@ -57,6 +69,8 @@ export interface RoomCreateResponse {
   inviteLink?: string;
   playerId?: string;
   isHost?: boolean;
+  /** Seeds each client's deterministic platform generation, so every player in the room climbs an identical tower. */
+  platformSeed?: number;
 }
 
 export interface RoomJoinRequest {
@@ -72,6 +86,8 @@ export interface RoomJoinResponse {
   roomCode?: string;
   playerId?: string;
   isHost?: boolean;
+  /** Seeds each client's deterministic platform generation, so every player in the room climbs an identical tower. */
+  platformSeed?: number;
 }
 
 export interface RoomStartResponse {
@@ -135,12 +151,22 @@ export interface LeaderboardUpdateEvent {
   leaderboard: LeaderboardEntry[];
 }
 
+/**
+ * A full picture of where everyone else is, keyed by playerId. Only currently
+ * connected players appear, and the recipient's own entry is always omitted —
+ * a client is the authority on its own position and never needs it echoed back.
+ */
+export interface PlayersPositionsEvent {
+  positions: Record<string, PlayerPosition>;
+}
+
 export interface ClientToServerEvents {
   'room:create': (req: RoomCreateRequest, ack: (res: RoomCreateResponse) => void) => void;
   'room:join': (req: RoomJoinRequest, ack: (res: RoomJoinResponse) => void) => void;
   'room:start': (ack: (res: RoomStartResponse) => void) => void;
   'answer:submit': (req: AnswerSubmitRequest, ack: (res: AnswerSubmitResponse) => void) => void;
   'climb:progress': (req: ClimbProgressUpdate) => void;
+  'player:move': (req: PlayerPosition) => void;
 }
 
 export interface ServerToClientEvents {
@@ -150,4 +176,5 @@ export interface ServerToClientEvents {
   'match:results': (event: MatchResultsEvent) => void;
   'match:ended': (event: MatchEndedEvent) => void;
   'leaderboard:update': (event: LeaderboardUpdateEvent) => void;
+  'players:positions': (event: PlayersPositionsEvent) => void;
 }

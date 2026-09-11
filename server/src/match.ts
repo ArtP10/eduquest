@@ -3,7 +3,8 @@ import type {
   ClientToServerEvents,
   ServerToClientEvents,
   LeaderboardEntry,
-  AnswerResult
+  AnswerResult,
+  PlayerPosition
 } from '@quizjumper/shared/events';
 import { connectedPlayerIds, getLobbyPlayerList, type Room } from './rooms.js';
 import { rankPlayersByClimbProgress } from './scoring.js';
@@ -13,11 +14,46 @@ type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
 const CLIMB_DURATION_MS = 8000;
 const RESULTS_DISPLAY_MS = 4000;
+// Ghost sprites interpolate across this window client-side, so it's both the
+// fan-out rate and the perceived smoothness knob (see design.md decision 3).
+const POSITION_BROADCAST_MS = 100;
 
 function clearPhaseTimer(room: Room): void {
   if (room.phaseTimer) {
     clearTimeout(room.phaseTimer);
     room.phaseTimer = null;
+  }
+}
+
+/**
+ * One snapshot per recipient rather than a single room-wide emit: each client's
+ * snapshot omits its own entry, since it's the authority on its own position
+ * and echoing it back would fight its local simulation.
+ */
+function broadcastPositions(io: IoServer, room: Room): void {
+  const connected = connectedPlayerIds(room);
+  for (const recipientId of connected) {
+    const recipient = room.players.get(recipientId);
+    if (!recipient) continue;
+    const positions: Record<string, PlayerPosition> = {};
+    for (const playerId of connected) {
+      if (playerId === recipientId) continue;
+      const position = room.positions.get(playerId);
+      if (position) positions[playerId] = position;
+    }
+    io.to(recipient.socketId).emit('players:positions', { positions });
+  }
+}
+
+function startPositionBroadcast(io: IoServer, room: Room): void {
+  if (room.positionTimer) return;
+  room.positionTimer = setInterval(() => broadcastPositions(io, room), POSITION_BROADCAST_MS);
+}
+
+function stopPositionBroadcast(room: Room): void {
+  if (room.positionTimer) {
+    clearInterval(room.positionTimer);
+    room.positionTimer = null;
   }
 }
 
@@ -29,7 +65,8 @@ function buildLeaderboard(room: Room): LeaderboardEntry[] {
       points: room.players.get(playerId)?.climbProgress ?? 0,
       score: score.correctAnswers,
       answered: score.questionsAnswered,
-      rank: 0
+      rank: 0,
+      connected: room.players.get(playerId)?.connected ?? false
     }))
     .sort((a, b) => b.points - a.points)
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
@@ -38,6 +75,10 @@ function buildLeaderboard(room: Room): LeaderboardEntry[] {
 export function startMatch(io: IoServer, room: Room): void {
   room.status = 'climbing';
   room.currentQuestionIndex = -1;
+  // Runs for the whole match, not just climb phases: during `frozen`/`results`
+  // players stand still but their ghosts must stay on screen, and a snapshot
+  // gap would make every client tear down and re-create them.
+  startPositionBroadcast(io, room);
   advanceToNextQuestion(io, room);
 }
 
@@ -120,7 +161,13 @@ function startResultsPhase(io: IoServer, room: Room): void {
   const question = room.quiz.questions[room.currentQuestionIndex];
   const answerResults: Record<string, AnswerResult> = {};
 
-  for (const playerId of room.players.keys()) {
+  // Disconnected players are excluded here (unlike buildLeaderboard, which
+  // still shows them frozen at their last standing) — without this, a
+  // player who dropped mid-match kept silently accumulating a wrong answer
+  // on every remaining question, dragging down both the live leaderboard's
+  // score/answered counts and the persisted match-history aggregate stats
+  // for a quiz, for questions that player never actually saw.
+  for (const playerId of connectedPlayerIds(room)) {
     const submitted = room.answers.get(playerId);
     const isCorrect = submitted ? submitted.choiceIndex === question.correctIndex : false;
 
@@ -166,6 +213,7 @@ function startResultsPhase(io: IoServer, room: Room): void {
 
 function endMatch(io: IoServer, room: Room): void {
   clearPhaseTimer(room);
+  stopPositionBroadcast(room);
   room.status = 'ended';
 
   const ranked = rankPlayersByClimbProgress(

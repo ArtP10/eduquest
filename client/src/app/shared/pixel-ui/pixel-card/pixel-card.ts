@@ -14,7 +14,9 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
         </span>
       }
       @if (averageGrade(); as grade) {
-        <span class="pixel-card-average">Promedio: {{ grade }}/100</span>
+        <span class="pixel-card-average" title="Promedio histórico de todas las partidas jugadas con este cuestionario">
+          Promedio histórico: {{ grade }}/100
+        </span>
       }
       <span class="pixel-card-meta">
         <span class="pixel-card-author">{{ author() }}</span>

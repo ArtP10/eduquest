@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import type { Quiz, QuizQuestion } from '@quizjumper/shared/quiz';
-import type { LobbyPlayer, Modifier } from '@quizjumper/shared/events';
+import type { LobbyPlayer, Modifier, PlayerPosition } from '@quizjumper/shared/events';
 
 export type MatchPhase = 'lobby' | 'climbing' | 'frozen' | 'results' | 'ended';
 
@@ -44,12 +44,21 @@ export interface Room {
   hostPlayerId: string | null;
   status: MatchPhase;
   quiz: Quiz;
+  // Platform layout is generated client-side, but every client in the room has
+  // to generate the *same* one for another player's broadcast position to mean
+  // anything — so the room hands out one seed and each client derives its
+  // tower from it (see design.md decision 1).
+  platformSeed: number;
   currentQuestionIndex: number;
   players: Map<string, Player>;
   answers: Map<string, SubmittedAnswer>;
   scores: Map<string, PlayerScore>;
   modifiers: Map<string, Modifier>;
+  // Latest position each client reported via `player:move`, coalesced here and
+  // fanned out on a fixed tick rather than relayed per-message (decision 2).
+  positions: Map<string, PlayerPosition>;
   phaseTimer: NodeJS.Timeout | null;
+  positionTimer: NodeJS.Timeout | null;
   phaseEndsAt: number | null;
   // Accumulated across the whole match (unlike `answers`, which is reset
   // every question) so match history has every player's per-question result
@@ -71,6 +80,11 @@ function generateRoomCode(): string {
     ).join('');
   } while (rooms.has(code));
   return code;
+}
+
+/** crypto.randomInt (the room-code RNG) rather than Math.random; capped at 2^32-1 since the client PRNG's state is 32-bit. */
+function generatePlatformSeed(): number {
+  return crypto.randomInt(1, 2 ** 32);
 }
 
 /** Fisher-Yates, using crypto.randomInt (already the room-code RNG) rather than Math.random. */
@@ -110,12 +124,15 @@ export function createRoom({ baseUrl = '', quiz }: { baseUrl?: string; quiz: Qui
     hostPlayerId: null,
     status: 'lobby',
     quiz: shuffleQuizForRoom(quiz),
+    platformSeed: generatePlatformSeed(),
     currentQuestionIndex: -1,
     players: new Map(),
     answers: new Map(),
     scores: new Map(),
     modifiers: new Map(),
+    positions: new Map(),
     phaseTimer: null,
+    positionTimer: null,
     phaseEndsAt: null,
     answerLog: []
   };
@@ -130,6 +147,7 @@ export function getRoom(code: string): Room | null {
 export function deleteRoom(code: string): void {
   const room = rooms.get(code);
   if (room?.phaseTimer) clearTimeout(room.phaseTimer);
+  if (room?.positionTimer) clearInterval(room.positionTimer);
   rooms.delete(code);
 }
 
@@ -159,6 +177,7 @@ export function removePlayerBySocketId(room: Room, socketId: string): string | n
         room.players.delete(playerId);
         room.scores.delete(playerId);
         room.modifiers.delete(playerId);
+        room.positions.delete(playerId);
         if (room.hostPlayerId === playerId) {
           const next = room.players.keys().next();
           room.hostPlayerId = next.done ? null : next.value;
@@ -178,6 +197,11 @@ export function getLobbyPlayerList(room: Room): LobbyPlayer[] {
     displayName: player.displayName,
     isHost: playerId === room.hostPlayerId
   }));
+}
+
+export function setPlayerPosition(room: Room, playerId: string, position: PlayerPosition): void {
+  if (!room.players.has(playerId)) return;
+  room.positions.set(playerId, position);
 }
 
 export function connectedPlayerIds(room: Room): string[] {

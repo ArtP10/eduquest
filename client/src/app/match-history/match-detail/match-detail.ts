@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 import {
@@ -14,7 +14,7 @@ import { PixelQuestionStats } from '../../shared/pixel-ui/pixel-question-stats/p
 @Component({
   selector: 'app-match-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DatePipe, PixelPanel, PixelButton, PixelQuestionStats],
+  imports: [RouterLink, DatePipe, DecimalPipe, PixelPanel, PixelButton, PixelQuestionStats],
   templateUrl: './match-detail.html',
   styleUrl: './match-detail.scss'
 })

@@ -40,12 +40,29 @@ export class PhaserBoard implements AfterViewInit, OnDestroy {
         this.scene?.setModifier(modifier);
       }
     });
+
+    effect(() => {
+      const players = this.socketService.lobbyPlayers();
+      this.scene?.setPlayerNames(
+        Object.fromEntries(players.map((p) => [p.playerId, p.displayName]))
+      );
+    });
+
+    effect(() => {
+      const positions = this.socketService.playerPositions();
+      this.scene?.applyPlayerPositions(positions);
+    });
   }
 
   ngAfterViewInit(): void {
     const scene = new JumperScene();
     scene.onProgress = (progress) => {
       this.latestProgress = progress;
+    };
+    // Already throttled by the scene (only fires on meaningful movement or a
+    // facing/animation change), so unlike progress it doesn't need a timer.
+    scene.onPosition = (position) => {
+      this.socketService.reportPlayerPosition(position);
     };
     // The `effect`s above may have already fired once with `this.scene`
     // still null (they run as soon as the component is constructed, which
@@ -54,6 +71,13 @@ export class PhaserBoard implements AfterViewInit, OnDestroy {
     // never receives the phase it missed.
     scene.setFrozen(this.socketService.matchPhase() !== 'climbing');
     scene.setModifier(this.socketService.myModifier());
+    // Must land before Phaser.Game boots the scene below — create() reads the
+    // seed once and the tower is generated from there on.
+    const seed = this.socketService.platformSeed();
+    if (seed !== null) scene.setPlatformSeed(seed);
+    scene.setPlayerNames(
+      Object.fromEntries(this.socketService.lobbyPlayers().map((p) => [p.playerId, p.displayName]))
+    );
     this.scene = scene;
 
     this.game = new Phaser.Game({

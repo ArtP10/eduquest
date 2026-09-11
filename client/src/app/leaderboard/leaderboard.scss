@@ -33,6 +33,10 @@
     &.first {
       background: color-mix(in srgb, var(--ucab-gold) 18%, var(--ucab-ink-3));
     }
+
+    &.disconnected {
+      opacity: 0.55;
+    }
   }
 
   .rank {
@@ -46,8 +50,18 @@
 
   .name {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
     font-size: 0.85rem;
     color: var(--ucab-paper);
+  }
+
+  .disconnected-tag {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--danger);
   }
 
   .score {

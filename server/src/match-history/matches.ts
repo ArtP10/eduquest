@@ -11,6 +11,7 @@ export function isUuid(value: string): boolean {
 export interface MatchPlacement {
   playerId: string;
   rank: number;
+  climbProgress: number;
 }
 
 /**
@@ -38,16 +39,24 @@ export async function persistMatch(room: Room, placements: MatchPlacement[]): Pr
     );
     const matchId = matchRows[0]!.id;
 
-    const placementByPlayerId = new Map(placements.map((p) => [p.playerId, p.rank]));
+    const placementByPlayerId = new Map(placements.map((p) => [p.playerId, p]));
     const matchPlayerIdByPlayerId = new Map<string, string>();
 
     for (const [playerId, player] of room.players.entries()) {
       const score = room.scores.get(playerId);
+      const placement = placementByPlayerId.get(playerId);
       const { rows } = await client.query<{ id: string }>(
-        `INSERT INTO match_players (match_id, user_id, nickname, final_score, final_placement)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO match_players (match_id, user_id, nickname, final_score, final_placement, final_height)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id`,
-        [matchId, player.userId ?? null, player.displayName, score?.correctAnswers ?? 0, placementByPlayerId.get(playerId) ?? 0]
+        [
+          matchId,
+          player.userId ?? null,
+          player.displayName,
+          score?.correctAnswers ?? 0,
+          placement?.rank ?? 0,
+          placement?.climbProgress ?? player.climbProgress
+        ]
       );
       matchPlayerIdByPlayerId.set(playerId, rows[0]!.id);
     }
@@ -128,6 +137,8 @@ export interface MatchLeaderboardEntry {
   nickname: string;
   finalScore: number;
   finalPlacement: number;
+  // Null only for a match recorded before this column existed.
+  finalHeight: number | null;
 }
 
 export interface MatchQuestionStats {
@@ -170,8 +181,9 @@ export async function getMatchDetail(matchId: string): Promise<MatchDetail | nul
     nickname: string;
     final_score: number;
     final_placement: number;
+    final_height: number | null;
   }>(
-    'SELECT id, user_id, nickname, final_score, final_placement FROM match_players WHERE match_id = $1 ORDER BY final_placement ASC',
+    'SELECT id, user_id, nickname, final_score, final_placement, final_height FROM match_players WHERE match_id = $1 ORDER BY final_placement ASC',
     [matchId]
   );
 
@@ -203,7 +215,8 @@ export async function getMatchDetail(matchId: string): Promise<MatchDetail | nul
       userId: row.user_id,
       nickname: row.nickname,
       finalScore: row.final_score,
-      finalPlacement: row.final_placement
+      finalPlacement: row.final_placement,
+      finalHeight: row.final_height
     })),
     questionStats: statsRows.map((row) => {
       const correctCount = Number(row.correct_count);

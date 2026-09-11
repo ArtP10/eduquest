@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { createSeededRandom, seededBetween } from '@quizjumper/shared/prng';
+import type { PlayerPosition, PlayerAnimKey } from '@quizjumper/shared/events';
 
 export const WORLD_WIDTH = 992;
 export const CANVAS_HEIGHT = 600;
@@ -95,9 +97,27 @@ const HEADROOM_X_THRESHOLD = PLATFORM_WIDTH;
 const HEADROOM_MARGIN = 15;
 const HEADROOM_MIN_GAP = PLAYER_HEIGHT + HEADROOM_MARGIN;
 
+// Ghosts render above platforms but below the local player, so "you" are never
+// hidden behind someone else's avatar.
+const GHOST_DEPTH = 1;
+const LOCAL_PLAYER_DEPTH = 2;
+const GHOST_ALPHA = 0.6;
+const GHOST_NAME_TAG_OFFSET_Y = 6;
+// Matches the server's position-broadcast tick: ghosts interpolate across one
+// tick so motion reads continuously instead of stepping ~10 times a second.
+const GHOST_TWEEN_MS = 100;
+// Same "only when it moved meaningfully" threshold already used for
+// climb:progress, applied to combined x/y movement rather than height alone.
+const POSITION_REPORT_DELTA_PX = 10;
+
 interface PlatformPlacement {
   x: number;
   y: number;
+}
+
+interface GhostPlayer {
+  sprite: Phaser.GameObjects.Sprite;
+  nameTag: Phaser.GameObjects.Text;
 }
 
 export class JumperScene extends Phaser.Scene {
@@ -128,7 +148,18 @@ export class JumperScene extends Phaser.Scene {
   // below them (see PLATFORM_MIN_SPACING_Y comment above).
   private previousRowPlacements: PlatformPlacement[] = [];
 
+  // Seeded per room so every client lays out the identical tower — without it,
+  // another player's broadcast position would refer to platforms that only
+  // exist in their own world (see design.md decision 1).
+  private platformSeed: number | null = null;
+  private random: () => number = Math.random;
+
+  private readonly ghosts = new Map<string, GhostPlayer>();
+  private playerNames: Record<string, string> = {};
+  private lastReportedPosition: PlayerPosition | null = null;
+
   onProgress: (progress: number) => void = () => {};
+  onPosition: (position: PlayerPosition) => void = () => {};
 
   constructor() {
     super('jumper');
@@ -142,6 +173,11 @@ export class JumperScene extends Phaser.Scene {
   }
 
   create(): void {
+    // A missing seed (scene somehow created before room:create/join resolved)
+    // degrades to today's per-client-random layout rather than refusing to
+    // render — the ghosts would simply stand on the wrong platforms.
+    this.random = createSeededRandom(this.platformSeed ?? Math.floor(Math.random() * 2 ** 32));
+
     this.drawBackground();
 
     this.physics.world.setBounds(0, -1_000_000, WORLD_WIDTH, 1_000_000 + FLOOR_HEIGHT);
@@ -178,6 +214,7 @@ export class JumperScene extends Phaser.Scene {
     // the sprite sinking into (or floating above) platforms.
     this.playerSprite.setOrigin(0.5, CHARACTER_FEET_ORIGIN_Y);
     this.playerSprite.setScale(CHARACTER_DISPLAY_HEIGHT / this.playerSprite.height);
+    this.playerSprite.setDepth(LOCAL_PLAYER_DEPTH);
     this.playerSprite.play('idle');
     // Default body (matches the player rectangle exactly, centered on the
     // object) — a previous manual setSize/setOffset here misaligned the
@@ -251,10 +288,17 @@ export class JumperScene extends Phaser.Scene {
     this.playerSprite.y = this.player.y + COLLIDER_HALF_HEIGHT;
     this.playerSprite.setFlipX(!this.facingRight);
 
-    const animKey = !grounded ? 'jump' : Math.abs(this.player.body.velocity.x) > 5 ? 'walk' : 'idle';
+    const animKey: PlayerAnimKey = !grounded
+      ? 'jump'
+      : Math.abs(this.player.body.velocity.x) > 5
+        ? 'walk'
+        : 'idle';
     if (this.playerSprite.anims.currentAnim?.key !== animKey) {
       this.playerSprite.play(animKey);
     }
+
+    this.reportPositionIfChanged(animKey);
+    this.updateGhostNameTags();
 
     if (this.player.y < this.highestY) {
       this.highestY = this.player.y;
@@ -292,6 +336,122 @@ export class JumperScene extends Phaser.Scene {
 
   setModifier(modifier: Modifier): void {
     this.modifier = modifier;
+  }
+
+  /** Must be called before the scene's create() runs, or the layout falls back to unseeded random. */
+  setPlatformSeed(seed: number): void {
+    this.platformSeed = seed;
+  }
+
+  /** Display names for ghost tags, sourced from the existing lobby roster. */
+  setPlayerNames(names: Record<string, string>): void {
+    this.playerNames = names;
+    for (const [playerId, ghost] of this.ghosts) {
+      ghost.nameTag.setText(names[playerId] ?? ghost.nameTag.text);
+    }
+  }
+
+  /**
+   * Applies one `players:positions` snapshot: the snapshot is the complete set
+   * of other connected players, so anything missing from it has disconnected
+   * and its ghost is torn down (there is no reconnect, so it never comes back).
+   */
+  applyPlayerPositions(positions: Record<string, PlayerPosition>): void {
+    // scene.create() may not have run yet (Phaser boots asynchronously) and
+    // ghosts need the animations and display list it sets up.
+    if (!this.playerSprite) return;
+
+    for (const [playerId, ghost] of [...this.ghosts]) {
+      if (!(playerId in positions)) {
+        this.tweens.killTweensOf(ghost.sprite);
+        ghost.sprite.destroy();
+        ghost.nameTag.destroy();
+        this.ghosts.delete(playerId);
+      }
+    }
+
+    for (const [playerId, position] of Object.entries(positions)) {
+      const ghost = this.ghosts.get(playerId) ?? this.createGhost(playerId, position);
+      const targetY = position.y + COLLIDER_HALF_HEIGHT;
+
+      ghost.sprite.setFlipX(!position.facingRight);
+      if (ghost.sprite.anims.currentAnim?.key !== position.animKey) {
+        ghost.sprite.play(position.animKey);
+      }
+
+      // A horizontal wrap is a teleport, not movement — tweening across it
+      // would drag the ghost backwards over the whole world.
+      this.tweens.killTweensOf(ghost.sprite);
+      if (Math.abs(ghost.sprite.x - position.x) > WORLD_WIDTH / 2) {
+        ghost.sprite.setPosition(position.x, targetY);
+      } else {
+        this.tweens.add({
+          targets: ghost.sprite,
+          x: position.x,
+          y: targetY,
+          duration: GHOST_TWEEN_MS,
+          ease: 'Linear'
+        });
+      }
+    }
+  }
+
+  /**
+   * Ghosts are plain sprites: no `physics.add.existing`, no body, and never
+   * passed to a collider — "no collision" holds by construction rather than by
+   * a flag someone could later flip (see design.md decision 3).
+   */
+  private createGhost(playerId: string, position: PlayerPosition): GhostPlayer {
+    const sprite = this.add.sprite(position.x, position.y + COLLIDER_HALF_HEIGHT, 'idle1');
+    sprite.setOrigin(0.5, CHARACTER_FEET_ORIGIN_Y);
+    sprite.setScale(CHARACTER_DISPLAY_HEIGHT / sprite.height);
+    sprite.setAlpha(GHOST_ALPHA);
+    sprite.setDepth(GHOST_DEPTH);
+    sprite.play(position.animKey);
+
+    const nameTag = this.add.text(sprite.x, sprite.y, this.playerNames[playerId] ?? 'Jugador', {
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      color: '#ffc526',
+      backgroundColor: '#0b1b24aa',
+      padding: { x: 4, y: 2 }
+    });
+    nameTag.setOrigin(0.5, 1);
+    nameTag.setAlpha(GHOST_ALPHA);
+    nameTag.setDepth(GHOST_DEPTH);
+
+    const ghost: GhostPlayer = { sprite, nameTag };
+    this.ghosts.set(playerId, ghost);
+    return ghost;
+  }
+
+  /** Tags follow the tweened sprite each frame rather than being tweened separately, so they can't drift apart from it. */
+  private updateGhostNameTags(): void {
+    for (const { sprite, nameTag } of this.ghosts.values()) {
+      nameTag.x = sprite.x;
+      nameTag.y = sprite.y - CHARACTER_DISPLAY_HEIGHT - GHOST_NAME_TAG_OFFSET_Y;
+    }
+  }
+
+  private reportPositionIfChanged(animKey: PlayerAnimKey): void {
+    const last = this.lastReportedPosition;
+    const movedFar =
+      !last ||
+      Math.abs(this.player.x - last.x) + Math.abs(this.player.y - last.y) >= POSITION_REPORT_DELTA_PX;
+    // Facing/animation are reported on change too: turning in place or landing
+    // moves the player less than the distance threshold, but leaving a ghost
+    // stuck mid-jump or facing the wrong way is exactly what's visible.
+    const visualChanged = !last || last.facingRight !== this.facingRight || last.animKey !== animKey;
+    if (!movedFar && !visualChanged) return;
+
+    const position: PlayerPosition = {
+      x: this.player.x,
+      y: this.player.y,
+      facingRight: this.facingRight,
+      animKey
+    };
+    this.lastReportedPosition = position;
+    this.onPosition(position);
   }
 
   private createCharacterAnimations(): void {
@@ -370,7 +530,7 @@ export class JumperScene extends Phaser.Scene {
   private generatePlatformsUpTo(targetY: number): void {
     let y = this.lastGeneratedY;
     while (y > targetY) {
-      let gap = Phaser.Math.Between(PLATFORM_GAP_MIN, PLATFORM_GAP_MAX);
+      let gap = seededBetween(this.random, PLATFORM_GAP_MIN, PLATFORM_GAP_MAX);
       // The very first row generated sits close enough to the floor that it
       // can otherwise land directly on top of where the character spawns —
       // force enough clearance to fully clear the spawned character's
@@ -402,9 +562,9 @@ export class JumperScene extends Phaser.Scene {
       // platforms is always jumpable.
       const minX = PLATFORM_WIDTH / 2;
       const maxX = WORLD_WIDTH - PLATFORM_WIDTH / 2;
-      const direction = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
+      const direction = seededBetween(this.random, 0, 1) === 0 ? -1 : 1;
       let xGapMax = computeXGapMax(gap);
-      let dx = Phaser.Math.Between(PLATFORM_X_GAP_MIN, xGapMax) * direction;
+      let dx = seededBetween(this.random, PLATFORM_X_GAP_MIN, xGapMax) * direction;
 
       // This step lands close enough in x to overlap the column the player
       // stands in on the previous path platform — if the rolled gap is
@@ -448,8 +608,8 @@ export class JumperScene extends Phaser.Scene {
       for (let f = 0; f < FILLER_PLATFORMS_PER_ROW; f++) {
         let placed = false;
         for (let attempt = 0; attempt < 8; attempt++) {
-          const fx = Phaser.Math.Between(minX, maxX);
-          const fy = y + Phaser.Math.Between(-8, 8);
+          const fx = seededBetween(this.random, minX, maxX);
+          const fy = y + seededBetween(this.random, -8, 8);
           const farEnoughInRow = rowPlacements.every((p) => Math.abs(p.x - fx) >= FILLER_MIN_SPACING);
           if (farEnoughInRow && !this.overlapsExisting(fx, fy, rowPlacements)) {
             this.addPlatformBlock(fx, fy, PLATFORM_WIDTH, PLATFORM_HEIGHT, UCAB_INK_3, UCAB_GOLD);
@@ -466,8 +626,8 @@ export class JumperScene extends Phaser.Scene {
       // A couple of dim pixel "stars" per row for depth, world-space so
       // they scroll in lockstep with the platforms (no gaps as we climb).
       for (let i = 0; i < 2; i++) {
-        const starX = Phaser.Math.Between(4, WORLD_WIDTH - 4);
-        const starY = y - Phaser.Math.Between(10, gap - 10);
+        const starX = seededBetween(this.random, 4, WORLD_WIDTH - 4);
+        const starY = y - seededBetween(this.random, 10, gap - 10);
         this.add.rectangle(starX, starY, 2, 2, UCAB_INK_2).setAlpha(0.8);
       }
     }

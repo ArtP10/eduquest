@@ -6,6 +6,7 @@
 - [x] 1.4 Change the two sample quizzes' `id` fields in `server/src/quizzes.ts` from string slugs to the same fixed UUIDs seeded in 1.3; document the invariant that the two must stay in sync by id
 - [x] 1.5 Add `isSample: boolean` to `QuizRecord`/`rowToQuiz` (`server/src/quiz-builder/quizzes.ts`, and the duplicate mapper in `server/src/quiz-generation/persistence.ts`); widen `authorId` to `string | null`
 - [x] 1.6 Exclude sample quizzes from `GET /quizzes/published` (`server/src/quiz-library/published-quizzes.ts`) with an explicit `is_sample = false` condition, alongside the existing `status = 'published'` filter
+- [x] 1.7 Add `1788600000004_add-match-player-final-height` migration: `match_players.final_height real` (nullable — see design.md Decision 5 and Migration Plan point 6, this is a new additive migration, not an edit to 002/003, since those had already run against real data in another environment)
 
 ## 2. Socket Payload & Identity Resolution
 
@@ -26,12 +27,14 @@
 
 ## 5. Gameplay Integration
 
-- [x] 5.1 In `endMatch()` (`server/src/match.ts`), after emitting `match:ended`, call `persistMatch()` with the room, its `answerLog`, and the already-computed `rankPlayersByClimbProgress()` placements as `final_placement`; catch and log persistence errors without affecting the emitted event or match teardown (see design.md Decision 4)
+- [x] 5.1 In `endMatch()` (`server/src/match.ts`), after emitting `match:ended`, call `persistMatch()` with the room, its `answerLog`, and the already-computed `rankPlayersByClimbProgress()` placements as `final_placement` and `final_height`; catch and log persistence errors without affecting the emitted event or match teardown (see design.md Decision 4)
+
+- [x] 5.2 Stop scoring/persisting answers for a disconnected player: iterate `connectedPlayerIds(room)` instead of `room.players.keys()` in `startResultsPhase()`; add `connected: boolean` to `LeaderboardEntry` (`shared/events.ts`) from `buildLeaderboard()`; show a "Desconectado" label on that player in the client leaderboard (`client/src/app/leaderboard/`) for the rest of the match (see design.md Decision 7a)
 
 ## 6. Backend Routes
 
 - [x] 6.1 Implement `GET /matches/mine` (requireAuth): list the requester's matches (as player and/or host) with their own final score/placement per match
-- [x] 6.2 Implement `GET /matches/:id` (requireAuth + participant check): full leaderboard, per-question stats (% correct, n/m), and the quiz's global average; 403 if requester was not a participant
+- [x] 6.2 Implement `GET /matches/:id` (requireAuth + participant check): full leaderboard (score, placement, climb height), per-question stats (% correct, n/m), and the quiz's global average; 403 if requester was not a participant
 - [x] 6.3 Implement `GET /matches/:id/players/:matchPlayerId/answers` (requireAuth + self-or-host check): per-question correct/incorrect breakdown; 403 otherwise
 - [x] 6.4 Implement `GET /quizzes/:id/stats` in the existing quiz-builder router/module: aggregate percent-correct and 0-100 grade across all matches of that quiz; empty/null result if never played
 - [x] 6.5 Mount the new match-history router in `server/src/index.ts` alongside the existing routers
@@ -49,7 +52,7 @@
 ## 9. Frontend Screens
 
 - [x] 9.1 Build the "My Matches" screen: quiz title, date, the user's final score/placement, and whether they hosted, per match
-- [x] 9.2 Build the match detail screen: leaderboard table, per-question stats, and the quiz's global average
+- [x] 9.2 Build the match detail screen: leaderboard table (score, placement, and climb height per player), per-question stats, and the quiz's global average, labeled clearly as a historical/all-time average (not this match's result) to avoid it reading as contradictory when this match's own per-question stats are 100%
 - [x] 9.3 Add per-player answer drill-down on the leaderboard: clicking a row shows that player's overall score (e.g. "3/5, 60%" — not a percentage per question, which is meaningless for a single participant) plus the full questionnaire review (each question's text and choices, with the participant's pick and the correct answer both marked); enabled for the room creator on every row, and for a regular player only on their own row (other rows show no control, or a disabled one)
 - [x] 9.4 Surface a quiz's global average on its Quiz Library card/detail view once `GET /quizzes/:id/stats` returns a non-empty result
 

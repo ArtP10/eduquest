@@ -27,11 +27,15 @@ The system SHALL provide an endpoint, available only to an authenticated user, t
 - **THEN** the server rejects the request as unauthenticated
 
 ### Requirement: Match Detail Visibility
-The system SHALL allow any participant (a player or the host) of a match to view that match's full detail: every participant's score and placement (including guest nicknames), per-question statistics, and the quiz's global average. The system SHALL reject the request if the requester was not a participant in that match.
+The system SHALL allow any participant (a player or the host) of a match to view that match's full detail: every participant's score, placement, and climb height (including guest nicknames), per-question statistics, and the quiz's global average. The system SHALL reject the request if the requester was not a participant in that match.
 
 #### Scenario: Participant views match detail
 - **WHEN** a client who played in or hosted a given match requests that match's detail
-- **THEN** the server returns the full leaderboard for that match (all participants, scores, placements, including guest nicknames), per-question statistics, and the quiz's global average
+- **THEN** the server returns the full leaderboard for that match (all participants, scores, placements, climb heights, including guest nicknames), per-question statistics, and the quiz's global average
+
+#### Scenario: Placement reflects climb height, not score
+- **WHEN** two or more participants of a match finished with the same score
+- **THEN** their placements in the returned leaderboard still reflect their relative climb height (the same ranking already used for the live in-game leaderboard), not a tie
 
 #### Scenario: Non-participant attempts to view match detail
 - **WHEN** an authenticated client who was neither a player nor the host of a given match requests that match's detail

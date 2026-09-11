@@ -14,7 +14,8 @@ import type {
   RoomCreateResponse,
   RoomJoinResponse,
   RoomStartResponse,
-  AnswerSubmitResponse
+  AnswerSubmitResponse,
+  PlayerPosition
 } from '@quizjumper/shared/events';
 
 @Injectable({ providedIn: 'root' })
@@ -47,6 +48,11 @@ export class SocketService {
 
   readonly errorMessage = signal<string | null>(null);
 
+  /** Seed for the room's shared platform layout; null until room:create/room:join resolves. */
+  readonly platformSeed = signal<number | null>(null);
+  /** Latest `players:positions` snapshot — every *other* connected player, keyed by playerId. */
+  readonly playerPositions = signal<Record<string, PlayerPosition>>({});
+
   constructor() {
     this.socket.on('lobby:update', ({ players }) => {
       this.lobbyPlayers.set(players);
@@ -65,6 +71,10 @@ export class SocketService {
 
     this.socket.on('leaderboard:update', ({ leaderboard }) => {
       this.leaderboard.set(leaderboard);
+    });
+
+    this.socket.on('players:positions', ({ positions }) => {
+      this.playerPositions.set(positions);
     });
 
     this.socket.on('match:freeze-start', (event) => {
@@ -130,6 +140,10 @@ export class SocketService {
     this.socket.emit('climb:progress', { progress });
   }
 
+  reportPlayerPosition(position: PlayerPosition): void {
+    this.socket.emit('player:move', position);
+  }
+
   /**
    * Leaves the finished room and resets local state back to the lobby
    * entry screen. Reconnecting (rather than just resetting local state)
@@ -156,6 +170,8 @@ export class SocketService {
     this.leaderboard.set([]);
     this.finalPlacements.set([]);
     this.errorMessage.set(null);
+    this.platformSeed.set(null);
+    this.playerPositions.set({});
   }
 
   private applyJoinResult(res: RoomCreateResponse | RoomJoinResponse): void {
@@ -168,5 +184,6 @@ export class SocketService {
     if (res.playerId) this.playerId.set(res.playerId);
     if (res.isHost !== undefined) this.isHost.set(res.isHost);
     if ('inviteLink' in res && res.inviteLink) this.inviteLink.set(res.inviteLink);
+    if (res.platformSeed !== undefined) this.platformSeed.set(res.platformSeed);
   }
 }

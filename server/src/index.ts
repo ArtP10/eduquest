@@ -5,7 +5,14 @@ import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import type { ClientToServerEvents, ServerToClientEvents } from '@quizjumper/shared/events';
 
-import { createRoom, getRoom, deleteRoom, addPlayer, removePlayerBySocketId } from './rooms.js';
+import {
+  createRoom,
+  getRoom,
+  deleteRoom,
+  addPlayer,
+  removePlayerBySocketId,
+  setPlayerPosition
+} from './rooms.js';
 import { startMatch, submitAnswer, reportClimbProgress, broadcastLobby } from './match.js';
 import { authRouter } from './auth/routes.js';
 import { quizBuilderRouter } from './quiz-builder/routes.js';
@@ -78,7 +85,8 @@ io.on('connection', (socket) => {
       roomCode: room.code,
       inviteLink: room.inviteLink,
       playerId,
-      isHost
+      isHost,
+      platformSeed: room.platformSeed
     });
     broadcastLobby(io, room);
   });
@@ -104,7 +112,7 @@ io.on('connection', (socket) => {
     socket.data.roomCode = room.code;
     socket.data.playerId = playerId;
 
-    ack({ ok: true, roomCode: room.code, playerId, isHost });
+    ack({ ok: true, roomCode: room.code, playerId, isHost, platformSeed: room.platformSeed });
     broadcastLobby(io, room);
   });
 
@@ -148,6 +156,15 @@ io.on('connection', (socket) => {
     const room = roomCode ? getRoom(roomCode) : null;
     if (!room || !playerId || typeof progress !== 'number') return;
     reportClimbProgress(io, room, playerId, progress);
+  });
+
+  socket.on('player:move', ({ x, y, facingRight, animKey }) => {
+    const { roomCode, playerId } = socket.data;
+    const room = roomCode ? getRoom(roomCode) : null;
+    if (!room || !playerId) return;
+    if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) return;
+    if (animKey !== 'idle' && animKey !== 'walk' && animKey !== 'jump') return;
+    setPlayerPosition(room, playerId, { x, y, facingRight: Boolean(facingRight), animKey });
   });
 
   socket.on('disconnect', () => {

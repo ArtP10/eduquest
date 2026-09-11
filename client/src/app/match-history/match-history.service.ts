@@ -19,6 +19,8 @@ export interface MatchLeaderboardEntry {
   nickname: string;
   finalScore: number;
   finalPlacement: number;
+  /** Null only for a match recorded before this was tracked. */
+  finalHeight: number | null;
 }
 
 export interface MatchQuestionStats {

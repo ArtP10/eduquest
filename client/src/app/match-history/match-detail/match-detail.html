@@ -12,7 +12,7 @@
     <p class="played-at">{{ m.playedAt | date: 'medium' }}</p>
 
     @if (m.quizGlobalStats; as stats) {
-      <p class="global-average">Promedio global del cuestionario: {{ stats.averageGrade }}/100</p>
+      <p class="global-average">Promedio histórico del cuestionario (todas las partidas): {{ stats.averageGrade }}/100</p>
     }
 
     <h3 class="section-title">Tabla de posiciones</h3>
@@ -23,6 +23,9 @@
             <span class="rank">#{{ entry.finalPlacement }}</span>
             <span class="nickname">{{ entry.nickname }}</span>
             <span class="score">{{ entry.finalScore }} pts</span>
+            @if (entry.finalHeight !== null) {
+              <span class="height">Altura: {{ entry.finalHeight | number: '1.0-0' }}</span>
+            }
             @if (canDrillDown(entry.matchPlayerId, entry.userId)) {
               <app-pixel-button variant="secondary" size="compact" (click)="toggleDrillDown(entry.matchPlayerId)">
                 {{ expandedMatchPlayerId() === entry.matchPlayerId ? 'Ocultar' : 'Ver respuestas' }}
