@@ -14,14 +14,22 @@ export interface MatchPlacement {
   climbProgress: number;
 }
 
+export interface PersistedMatch {
+  matchId: string;
+  /** playerId (this room's in-memory id) -> matchPlayerId (the persisted row's id) — lets endMatch build match:ended's per-player drill-down ids without a second query. */
+  matchPlayerIdByPlayerId: Map<string, string>;
+}
+
 /**
  * Writes one `matches` row, one `match_players` row per player in the room
  * (guests included, `user_id` null), and one `match_answers` row per entry in
- * `answerLog`, in a single transaction. Called fire-and-forget from
- * `endMatch()` — see design.md decision 4: a failure here must never affect
- * the already-emitted `match:ended` event.
+ * `answerLog`, in a single transaction. Awaited (not fire-and-forget) by
+ * `endMatch()` before match:ended is emitted, so its result — the ids
+ * needed for match:ended's per-player drill-down — is always available on
+ * success; a failure here must still never affect the already-computed
+ * match:ended payload (endMatch degrades matchId/players instead).
  */
-export async function persistMatch(room: Room, placements: MatchPlacement[]): Promise<void> {
+export async function persistMatch(room: Room, placements: MatchPlacement[]): Promise<PersistedMatch> {
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
@@ -83,6 +91,7 @@ export async function persistMatch(room: Room, placements: MatchPlacement[]): Pr
     }
 
     await client.query('COMMIT');
+    return { matchId, matchPlayerIdByPlayerId };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

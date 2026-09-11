@@ -60,7 +60,7 @@
 
 ## 10. Verification
 
-- [ ] 10.1 Manually test end-to-end: browse the library unauthenticated, search, filter by tag, sort by popular/newest, paginate
-- [ ] 10.2 Manually test: "Crear sala" -> library -> pick a card -> room created with that quiz; play count increments once per room, not per joining player
-- [ ] 10.3 Manually test: add/remove tags on a manual quiz and on an AI-generated quiz from the builder screen; confirm case-insensitive dedup (adding "Math" when "math" exists doesn't create a duplicate)
+- [x] 10.1 Manually test end-to-end: browse the library unauthenticated, search, filter by tag, sort by popular/newest, paginate
+- [x] 10.2 Manually test: "Crear sala" -> library -> pick a card -> room created with that quiz; play count increments once per room, not per joining player
+- [x] 10.3 Manually test: add/remove tags on a manual quiz and on an AI-generated quiz from the builder screen; confirm case-insensitive dedup (adding "Math" when "math" exists doesn't create a duplicate)
 - [x] 10.4 Run server and client test suites and confirm both apps build

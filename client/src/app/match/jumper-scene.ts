@@ -170,6 +170,7 @@ export class JumperScene extends Phaser.Scene {
       this.load.image(key, `sprites/${key}.png`);
     }
     this.load.image('worldBackdrop', 'sprites/download.png');
+    this.load.audio('jump-sound', 'sound/jump-sound.mp3');
   }
 
   create(): void {
@@ -269,6 +270,7 @@ export class JumperScene extends Phaser.Scene {
         (this.cursors?.up && Phaser.Input.Keyboard.JustDown(this.cursors.up));
       if (jumpPressed && grounded) {
         this.player.body.setVelocityY(BASE_JUMP_VELOCITY * this.jumpMultiplier());
+        this.sound.play('jump-sound', { volume: 0.7 });
       }
 
       // Wrap horizontally, Doodle-Jump style.

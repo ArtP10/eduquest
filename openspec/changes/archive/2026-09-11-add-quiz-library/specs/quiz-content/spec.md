@@ -23,6 +23,10 @@ The system SHALL assign a quiz to a room when the room is created: whichever qui
 - **WHEN** a room is created with a selected published quiz and multiple players subsequently join that room
 - **THEN** that quiz's play count increases by exactly 1 for the room's creation, not once per joining player
 
+#### Scenario: Available quizzes remain listable when the database is unreachable
+- **WHEN** a client requests the list of quizzes available for room creation while Postgres is unreachable
+- **THEN** the server returns the hardcoded sample quizzes only, omitting published quizzes, without failing the request or blocking room creation
+
 #### Scenario: Question order is shuffled per room
 - **WHEN** a room is created and assigned a quiz with more than one question
 - **THEN** the order questions are presented in that room is independently randomized, not the quiz's authored order

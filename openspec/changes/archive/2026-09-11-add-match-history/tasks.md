@@ -64,5 +64,5 @@
 - [x] 10.4 Manually verify the answer drill-down endpoint: a player can view their own answers, the host can view anyone's, and a non-host/non-owner is rejected
 - [x] 10.5 Manually verify a guest-hosted match persists with no host user id, and that no authenticated user can use host access to view another participant's drill-down for it
 - [x] 10.6 Manually verify `GET /quizzes/:id/stats` returns an aggregate for a played quiz and an empty result for an unplayed one
-- [ ] 10.7 Manually verify a persistence failure (e.g., Postgres unreachable at match end) does not break the live match's `match:ended` event for connected clients
-- [ ] 10.8 Manually verify live in-game leaderboard, scoring, boost/slowdown, and jumper mechanics are unchanged
+- [x] 10.7 Manually verify a persistence failure (e.g., Postgres unreachable at match end) does not break the live match's `match:ended` event for connected clients
+- [x] 10.8 Manually verify live in-game leaderboard, scoring, boost/slowdown, and jumper mechanics are unchanged

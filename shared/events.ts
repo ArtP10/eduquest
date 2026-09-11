@@ -156,6 +156,13 @@ export interface QuizGlobalStats {
   averageGrade: number;
 }
 
+/** One room player's identity in the persisted match, once persistMatch has run — lets the live end screen drill into that player's answers exactly like the historical match-detail page does. */
+export interface MatchEndedPlayer {
+  playerId: string;
+  matchPlayerId: string;
+  userId: string | null;
+}
+
 export interface MatchEndedEvent {
   leaderboard: LeaderboardEntry[];
   placements: PlacementEntry[];
@@ -163,8 +170,11 @@ export interface MatchEndedEvent {
   /** This match's own aggregate percent-correct across every answer submitted in it — computed in-memory, always present, independent of match-history persistence. */
   matchAverageGrade: number;
   questionStats: MatchQuestionStat[];
-  /** All-time percent-correct across every OTHER recorded match of this quiz (this match's own answers are persisted asynchronously after this event, so they aren't counted yet — see match.ts's endMatch). Null if this quiz has no prior recorded plays, or the historical lookup failed. */
+  /** All-time percent-correct across every OTHER recorded match of this quiz. This match's own answers are already persisted by the time this event fires (persistMatch is awaited before match:ended is emitted — see match.ts's endMatch), so once this match itself has been recorded once, its own answers ARE counted here too. Null if this quiz has no prior recorded plays, or the historical lookup failed. */
   quizGlobalStats: QuizGlobalStats | null;
+  /** The persisted match's id, or null if persistence failed — used to drill into individual player answers via the same endpoint the historical match-detail page uses. Null means `players` is empty and drill-down isn't available for this match. */
+  matchId: string | null;
+  players: MatchEndedPlayer[];
 }
 
 export interface LeaderboardUpdateEvent {

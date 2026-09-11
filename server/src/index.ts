@@ -71,7 +71,17 @@ io.on('connection', (socket) => {
       ack({ ok: false, error: 'Se requiere un nombre para mostrar.' });
       return;
     }
-    const quiz = await resolveQuizForRoom(quizId);
+    if (!quizId || typeof quizId !== 'string') {
+      ack({ ok: false, error: 'Se requiere seleccionar un quiz.' });
+      return;
+    }
+    let quiz;
+    try {
+      quiz = await resolveQuizForRoom(quizId);
+    } catch {
+      ack({ ok: false, error: 'No se pudo cargar el quiz seleccionado.' });
+      return;
+    }
     const room = createRoom({ baseUrl: CLIENT_ORIGIN, quiz });
     const userId = resolveSocketUserId(authToken);
     const { playerId, isHost } = addPlayer(room, { displayName, socketId: socket.id, userId });

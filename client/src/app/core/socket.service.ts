@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '../../environments/environment';
 import { AuthService } from '../auth/auth.service';
+import { AudioService } from './audio.service';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -17,12 +18,14 @@ import type {
   AnswerSubmitResponse,
   PlayerPosition,
   MatchQuestionStat,
-  QuizGlobalStats
+  QuizGlobalStats,
+  MatchEndedPlayer
 } from '@quizjumper/shared/events';
 
 @Injectable({ providedIn: 'root' })
 export class SocketService {
   private readonly authService = inject(AuthService);
+  private readonly audioService = inject(AudioService);
 
   private readonly socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(environment.apiUrl, {
     autoConnect: true
@@ -54,6 +57,10 @@ export class SocketService {
   readonly matchAverageGrade = signal<number | null>(null);
   readonly questionStats = signal<MatchQuestionStat[]>([]);
   readonly quizGlobalStats = signal<QuizGlobalStats | null>(null);
+  // Null when match persistence failed — drill-down into individual
+  // player answers isn't available for this match in that case.
+  readonly matchId = signal<string | null>(null);
+  readonly matchPlayers = signal<MatchEndedPlayer[]>([]);
 
   readonly errorMessage = signal<string | null>(null);
 
@@ -63,6 +70,11 @@ export class SocketService {
   readonly playerPositions = signal<Record<string, PlayerPosition>>({});
 
   constructor() {
+    // Default matchPhase is 'lobby' from page load, before any room:create/join
+    // event — so lobby-song's initial loop() call has to happen here rather
+    // than in a phase-transition handler.
+    this.audioService.loop('lobby-song');
+
     this.socket.on('lobby:update', ({ players }) => {
       this.lobbyPlayers.set(players);
       const me = players.find((p) => p.playerId === this.playerId());
@@ -76,6 +88,8 @@ export class SocketService {
       this.phaseEndsAt.set(event.phaseEndsAt);
       this.currentQuestion.set(null);
       this.leaderboard.set(event.leaderboard);
+      this.audioService.stopLoop('lobby-song');
+      this.audioService.loop('game-song');
     });
 
     this.socket.on('leaderboard:update', ({ leaderboard }) => {
@@ -103,6 +117,7 @@ export class SocketService {
       const mine = this.playerId();
       const myResult = mine ? event.answers[mine] : undefined;
       this.myModifier.set(myResult?.modifier ?? 'slowdown');
+      if (myResult) this.audioService.play(myResult.isCorrect ? 'success-sound' : 'error-sound');
     });
 
     this.socket.on('match:ended', (event) => {
@@ -113,6 +128,10 @@ export class SocketService {
       this.matchAverageGrade.set(event.matchAverageGrade);
       this.questionStats.set(event.questionStats);
       this.quizGlobalStats.set(event.quizGlobalStats);
+      this.matchId.set(event.matchId);
+      this.matchPlayers.set(event.players);
+      this.audioService.stopLoop('game-song');
+      this.audioService.loop('lobby-song');
     });
   }
 
@@ -167,6 +186,9 @@ export class SocketService {
     this.socket.disconnect();
     this.socket.connect();
 
+    this.audioService.stopLoop('game-song');
+    this.audioService.loop('lobby-song');
+
     this.roomCode.set(null);
     this.inviteLink.set(null);
     this.playerId.set(null);
@@ -186,6 +208,8 @@ export class SocketService {
     this.matchAverageGrade.set(null);
     this.questionStats.set([]);
     this.quizGlobalStats.set(null);
+    this.matchId.set(null);
+    this.matchPlayers.set([]);
     this.errorMessage.set(null);
     this.platformSeed.set(null);
     this.playerPositions.set({});

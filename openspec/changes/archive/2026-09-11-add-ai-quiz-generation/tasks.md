@@ -46,6 +46,6 @@
 
 ## 8. Verification
 
-- [ ] 8.1 Manually test end-to-end: upload a real text-layer PDF, generate 5/20/50 questions, confirm the resulting draft opens correctly in the existing quiz editor and can be edited/published unmodified
-- [ ] 8.2 Manually test failure paths in the browser: invalid question count, non-PDF file, empty-text PDF, simulated Gemini failure — confirm no stray quiz appears in My Quizzes
+- [x] 8.1 Manually test end-to-end: upload a real text-layer PDF, generate 5/20/50 questions, confirm the resulting draft opens correctly in the existing quiz editor and can be edited/published unmodified
+- [x] 8.2 Manually test failure paths in the browser: invalid question count, non-PDF file, empty-text PDF, simulated Gemini failure — confirm no stray quiz appears in My Quizzes
 - [x] 8.3 Run server and client test suites

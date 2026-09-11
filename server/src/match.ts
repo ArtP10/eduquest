@@ -6,11 +6,12 @@ import type {
   AnswerResult,
   PlayerPosition,
   MatchQuestionStat,
-  QuizGlobalStats
+  QuizGlobalStats,
+  MatchEndedPlayer
 } from '@quizjumper/shared/events';
 import { connectedPlayerIds, getLobbyPlayerList, type MatchAnswerRecord, type Room } from './rooms.js';
 import { rankPlayersByClimbProgress } from './scoring.js';
-import { persistMatch, getQuizGlobalStats } from './match-history/matches.js';
+import { persistMatch, getQuizGlobalStats, type PersistedMatch } from './match-history/matches.js';
 
 type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -304,8 +305,9 @@ async function endMatch(io: IoServer, room: Room): Promise<void> {
   // would visibly lag one match behind until the next time it's viewed. A
   // failure here still must never block match:ended from firing, so it's
   // caught and logged rather than awaited-and-thrown.
+  let persisted: PersistedMatch | null = null;
   try {
-    await persistMatch(room, placements);
+    persisted = await persistMatch(room, placements);
   } catch (err) {
     console.error(`Failed to persist match history for room ${room.code}:`, err);
   }
@@ -321,13 +323,27 @@ async function endMatch(io: IoServer, room: Room): Promise<void> {
     console.error(`Failed to load historical quiz stats for room ${room.code}:`, err);
   }
 
+  // persistMatch inserts a match_players row for every entry in room.players
+  // at the time it ran; nothing can join/leave room.players between that
+  // call and here (no await in between), so every player is expected to
+  // have a matchPlayerId — the filter is just defense against that
+  // invariant ever breaking, rather than silently emitting a bogus id.
+  const players: MatchEndedPlayer[] = persisted
+    ? [...room.players.entries()].flatMap(([playerId, player]) => {
+        const matchPlayerId = persisted!.matchPlayerIdByPlayerId.get(playerId);
+        return matchPlayerId ? [{ playerId, matchPlayerId, userId: player.userId ?? null }] : [];
+      })
+    : [];
+
   io.to(room.code).emit('match:ended', {
     leaderboard: buildLeaderboard(room),
     placements,
     quizTitle: room.quiz.title,
     matchAverageGrade,
     questionStats,
-    quizGlobalStats
+    quizGlobalStats,
+    matchId: persisted?.matchId ?? null,
+    players
   });
 }
 
